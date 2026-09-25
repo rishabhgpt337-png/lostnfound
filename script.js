@@ -1,33 +1,43 @@
 // ============================================================
 //  Campus Lost & Found Portal — script.js
-//  This file handles all the JavaScript logic for the app.
+//  Course: FYBSc IT - Introduction to Programming
 //
-//  Topics used (for viva explanation):
-//  - Variables (var, let, const)
-//  - Arrays and Objects
-//  - Functions
-//  - if/else conditions
-//  - for loops
-//  - Event listeners
-//  - DOM manipulation (getElementById, innerHTML, classList)
-//  - localStorage (save and load data in the browser)
-//  - FileReader API (read image file as a data URL string)
+//  This script manages the complete client-side functionality:
+//  - LocalStorage Data Persistence
+//  - Single Page Application (SPA) Section Navigation
+//  - Form Validation & Image Processing (FileReader)
+//  - Dynamic DOM Rendering for Item Cards & Statistics
+//  - Real-time Keyword Search & Category/Status Filtering
+//  - Item Details Modal & Status Update ("Mark as Resolved")
+//
+//  Key Concepts Used for Viva:
+//  1. Variables (let, const, var)
+//  2. Data Structures (Arrays and Objects)
+//  3. Functions and Parameter Passing
+//  4. Conditional Logic (if / else if / else)
+//  5. Iteration (for loops, forEach, filter, find)
+//  6. DOM Selection & Manipulation (getElementById, querySelector, innerHTML)
+//  7. Event Handling (addEventListener, submit, click, input, keydown)
+//  8. Web APIs (localStorage, JSON.parse/stringify, FileReader)
 // ============================================================
 
 
-// ---------- 1. SAMPLE DATA ----------
-// This array is used to pre-fill the app when no data exists.
-// It helps demonstrate the features in a fresh browser.
-var sampleItems = [
+// ---------- 1. CONSTANTS & INITIAL SAMPLE DATA ----------
+
+// LocalStorage key name used to store items in the user's browser
+const STORAGE_KEY = "college_lost_found_items";
+
+// Sample demonstration dataset pre-loaded when the app is first opened
+const SAMPLE_ITEMS = [
     {
         id: 1,
         type: "Lost",
-        name: "Black Wallet",
+        name: "Black Leather Wallet",
         category: "Wallets/Bags",
-        description: "[Sample Entry] Black leather wallet with college ID card and some cash inside.",
-        date: "2026-09-20",
-        location: "College Canteen",
-        contactName: "Rahul Sharma",
+        description: "[Demo Sample] Black WildHorn leather wallet containing college ID card and metro smart card.",
+        date: "2026-09-23",
+        location: "College Canteen Table 4",
+        contactName: "Rahul Sharma (FYBSc IT)",
         contactNumber: "9876543210",
         image: "",
         status: "Active"
@@ -35,12 +45,12 @@ var sampleItems = [
     {
         id: 2,
         type: "Found",
-        name: "Water Bottle (Blue)",
+        name: "Blue Milton Water Bottle",
         category: "Personal",
-        description: "[Sample Entry] Blue Milton steel bottle found near the library entrance.",
-        date: "2026-09-21",
-        location: "Library",
-        contactName: "Priya Mehta",
+        description: "[Demo Sample] Stainless steel blue Milton 1-litre water bottle left on the study table.",
+        date: "2026-09-24",
+        location: "Library Reading Room (2nd Floor)",
+        contactName: "Priya Mehta (SYBSc IT)",
         contactNumber: "9123456789",
         image: "",
         status: "Active"
@@ -48,12 +58,12 @@ var sampleItems = [
     {
         id: 3,
         type: "Lost",
-        name: "Calculator (Casio)",
+        name: "Casio Scientific Calculator",
         category: "Electronics",
-        description: "[Sample Entry] Casio scientific calculator with a small scratch on the corner.",
-        date: "2026-09-18",
-        location: "Computer Lab 3",
-        contactName: "Aman Verma",
+        description: "[Demo Sample] Casio fx-991EX calculator with an IT department sticker on the back cover.",
+        date: "2026-09-22",
+        location: "Computer Lab 3 (Ground Floor)",
+        contactName: "Aman Verma (FYBSc IT)",
         contactNumber: "9000012345",
         image: "",
         status: "Active"
@@ -61,50 +71,61 @@ var sampleItems = [
     {
         id: 4,
         type: "Found",
-        name: "College ID Card",
+        name: "Student ID Card & Lanyard",
         category: "ID/Documents",
-        description: "[Sample Entry] Found a college ID card on the ground floor corridor near Room 101.",
-        date: "2026-09-22",
-        location: "Main Corridor",
-        contactName: "Sunita Rao",
+        description: "[Demo Sample] First-year college identity card found near the auditorium entrance corridor.",
+        date: "2026-09-21",
+        location: "Main Auditorium Corridor",
+        contactName: "Sunita Rao (Security Office)",
         contactNumber: "9765432108",
         image: "",
         status: "Resolved"
     }
 ];
 
+// Current active filter state
+let currentFilterType = "All";
 
-// ---------- 2. LOAD/SAVE to localStorage ----------
 
-// Load items array from localStorage.
-// If nothing is there yet, use the sample data.
-function loadItems() {
-    var stored = localStorage.getItem("campusLostFoundItems");
+// ---------- 2. LOCALSTORAGE HELPER FUNCTIONS ----------
 
-    if (stored === null) {
-        // First time — no data in localStorage yet.
-        // Save sample data so there is something to display.
-        saveItems(sampleItems);
-        return sampleItems;
+/**
+ * Retrieve all items from browser localStorage.
+ * If no data exists yet, initialize with the sample dataset.
+ * @returns {Array} Array of item objects
+ */
+function getItemsFromStorage() {
+    const rawData = localStorage.getItem(STORAGE_KEY);
+    if (rawData === null) {
+        // First visit: save and return default sample data
+        saveItemsToStorage(SAMPLE_ITEMS);
+        return [...SAMPLE_ITEMS];
     }
-
-    // JSON.parse converts the stored text back into a JavaScript array
-    return JSON.parse(stored);
+    try {
+        return JSON.parse(rawData);
+    } catch (e) {
+        console.error("Error parsing localStorage data", e);
+        return [];
+    }
 }
 
-// Save the items array into localStorage.
-// JSON.stringify converts the array to a text string for storage.
-function saveItems(items) {
-    localStorage.setItem("campusLostFoundItems", JSON.stringify(items));
+/**
+ * Save the array of items to browser localStorage as a JSON string.
+ * @param {Array} items - Array of item objects
+ */
+function saveItemsToStorage(items) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
-// Get a new unique ID by finding the highest existing ID and adding 1.
-function getNewId(items) {
-    if (items.length === 0) {
-        return 1;
-    }
-    var maxId = 0;
-    for (var i = 0; i < items.length; i++) {
+/**
+ * Generate a new unique integer ID for an item.
+ * @param {Array} items - Existing items array
+ * @returns {number} Unique numeric ID
+ */
+function generateUniqueId(items) {
+    if (!items || items.length === 0) return 1;
+    let maxId = 0;
+    for (let i = 0; i < items.length; i++) {
         if (items[i].id > maxId) {
             maxId = items[i].id;
         }
@@ -112,403 +133,835 @@ function getNewId(items) {
     return maxId + 1;
 }
 
+/**
+ * Reset localStorage to sample demo items (useful for demonstrations).
+ */
+function resetToSampleData() {
+    if (confirm("Reset all items back to the initial sample demonstration data?")) {
+        saveItemsToStorage(SAMPLE_ITEMS);
+        updateStats();
+        renderItems();
+        renderRecentItems();
+        showToast("Demo data restored successfully!", "success");
+    }
+}
 
-// ---------- 3. STATISTICS ----------
 
-// Count and display how many items are Lost, Found, and Resolved.
+// ---------- 3. NAVIGATION & VIEW SWITCHING ----------
+
+/**
+ * Switch the visible section (Single Page App behavior).
+ * @param {string} sectionId - 'home', 'report-lost', 'report-found', or 'items'
+ */
+function showSection(sectionId) {
+    // 1. Hide all sections
+    const sections = document.querySelectorAll(".main-content .section");
+    sections.forEach(sec => sec.classList.remove("active"));
+
+    // 2. Show the target section
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+        targetSection.classList.add("active");
+    }
+
+    // 3. Update active nav link
+    const navLinks = document.querySelectorAll(".nav-menu li a");
+    navLinks.forEach(link => {
+        link.classList.remove("active");
+        if (link.getAttribute("href") === "#" + sectionId) {
+            link.classList.add("active");
+        }
+    });
+
+    // 4. Close mobile menu if open
+    const navMenu = document.getElementById("nav-menu");
+    if (navMenu) {
+        navMenu.classList.remove("show");
+    }
+
+    // 5. Trigger section-specific updates
+    if (sectionId === "items") {
+        renderItems();
+    } else if (sectionId === "home") {
+        updateStats();
+        renderRecentItems();
+    }
+
+    // 6. Scroll window to top
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/**
+ * Helper to jump directly from stats cards to the items page with a filter applied.
+ * @param {string} filterType - 'Lost', 'Found', or 'Resolved'
+ */
+function filterAndShow(filterType) {
+    setFilterType(filterType);
+    showSection("items");
+}
+
+/**
+ * Toggle mobile navigation hamburger menu.
+ */
+function toggleMobileNav() {
+    const navMenu = document.getElementById("nav-menu");
+    if (navMenu) {
+        navMenu.classList.toggle("show");
+    }
+}
+
+
+// ---------- 4. STATISTICS CALCULATION ----------
+
+/**
+ * Compute counts for Lost, Found, and Resolved items and update the UI.
+ */
 function updateStats() {
-    var items = loadItems();
-    var lostCount = 0;
-    var foundCount = 0;
-    var resolvedCount = 0;
+    const items = getItemsFromStorage();
 
-    // Loop through all items and count each type
-    for (var i = 0; i < items.length; i++) {
-        if (items[i].status === "Resolved") {
+    let lostCount = 0;
+    let foundCount = 0;
+    let resolvedCount = 0;
+
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.status === "Resolved") {
             resolvedCount++;
-        } else if (items[i].type === "Lost") {
+        } else if (item.type === "Lost") {
             lostCount++;
-        } else if (items[i].type === "Found") {
+        } else if (item.type === "Found") {
             foundCount++;
         }
     }
 
-    // Update the numbers on the home page
-    document.getElementById("total-lost").textContent = lostCount;
-    document.getElementById("total-found").textContent = foundCount;
-    document.getElementById("total-resolved").textContent = resolvedCount;
+    // Update Home page statistics
+    const totalLostEl = document.getElementById("total-lost");
+    const totalFoundEl = document.getElementById("total-found");
+    const totalResolvedEl = document.getElementById("total-resolved");
+
+    if (totalLostEl) totalLostEl.textContent = lostCount;
+    if (totalFoundEl) totalFoundEl.textContent = foundCount;
+    if (totalResolvedEl) totalResolvedEl.textContent = resolvedCount;
+
+    // Update Filter Tab badge counters on Items page
+    const countAllEl = document.getElementById("count-all");
+    const countLostEl = document.getElementById("count-lost");
+    const countFoundEl = document.getElementById("count-found");
+    const countResolvedEl = document.getElementById("count-resolved");
+
+    if (countAllEl) countAllEl.textContent = items.length;
+    if (countLostEl) countLostEl.textContent = lostCount;
+    if (countFoundEl) countFoundEl.textContent = foundCount;
+    if (countResolvedEl) countResolvedEl.textContent = resolvedCount;
 }
 
 
-// ---------- 4. NAVIGATION ----------
+// ---------- 5. IMAGE UPLOAD & PREVIEW (FileReader API) ----------
 
-// Show the selected section and hide others.
-// Also highlight the active nav link.
-function showSection(sectionId) {
-    // Get all <section> elements on the page
-    var sections = document.querySelectorAll("main section");
+/**
+ * Read and preview the selected image file before submission.
+ * @param {HTMLInputElement} input - File input element
+ * @param {string} previewContainerId - ID of preview container div
+ */
+function previewImage(input, previewContainerId) {
+    const container = document.getElementById(previewContainerId);
+    if (!container) return;
 
-    // Hide every section
-    for (var i = 0; i < sections.length; i++) {
-        sections[i].classList.remove("active");
-    }
-
-    // Show only the section that was clicked
-    var target = document.getElementById(sectionId);
-    if (target) {
-        target.classList.add("active");
-    }
-
-    // If user goes to the items page, render the items list
-    if (sectionId === "items") {
-        renderItems();
-    }
-
-    // Update stats every time user goes home
-    if (sectionId === "home") {
-        updateStats();
-    }
-
-    // Highlight the correct nav link
-    var navLinks = document.querySelectorAll("nav ul li a");
-    for (var j = 0; j < navLinks.length; j++) {
-        navLinks[j].classList.remove("active");
-        if (navLinks[j].getAttribute("href") === "#" + sectionId) {
-            navLinks[j].classList.add("active");
-        }
-    }
-
-    // Smooth scroll to top
-    window.scrollTo(0, 0);
-}
-
-
-// ---------- 5. FORM HANDLING ----------
-
-// Read image file as a base64 data URL using FileReader.
-// This lets us store and display images without a server.
-function readImageFile(fileInput, callback) {
-    var file = fileInput.files[0];
+    const file = input.files && input.files[0];
     if (!file) {
-        // No file selected
-        callback("");
+        container.innerHTML = "";
+        container.style.display = "none";
         return;
     }
 
-    // Check file size — localStorage has a limit (~5MB total)
-    // We restrict images to around 1MB to be safe
+    // Validate image file size (limit to ~1MB to keep localStorage lightweight)
     if (file.size > 1048576) {
-        showMessage("Image is too large. Please use an image smaller than 1MB.", "error", fileInput.closest("form"));
-        callback("");
+        alert("Image size exceeds 1MB. Please select a smaller photo.");
+        input.value = ""; // Clear file selection
+        container.innerHTML = "";
+        container.style.display = "none";
         return;
     }
 
-    var reader = new FileReader();
-    reader.onload = function(event) {
-        // event.target.result is the image as a data URL string
-        callback(event.target.result);
+    // Use FileReader to convert file into base64 Data URL
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        container.innerHTML = `
+            <img src="${e.target.result}" alt="Photo Preview">
+            <p style="font-size:0.75rem; color:#64748b; margin-top:4px;">Photo selected (${Math.round(file.size / 1024)} KB)</p>
+        `;
+        container.style.display = "block";
     };
     reader.readAsDataURL(file);
 }
 
-// Show a success or error message above the form
-function showMessage(text, type, formElement) {
-    // Remove any existing message first
-    var oldMsg = formElement.querySelector(".msg-success, .msg-error");
-    if (oldMsg) {
-        oldMsg.remove();
-    }
-
-    var msg = document.createElement("div");
-    msg.textContent = text;
-    msg.className = (type === "success") ? "msg-success" : "msg-error";
-
-    // Insert message at the top of the form
-    formElement.insertBefore(msg, formElement.firstChild);
-
-    // Auto-remove after 4 seconds
-    setTimeout(function() {
-        if (msg.parentNode) {
-            msg.remove();
+/**
+ * Helper to read a file input as Base64 string asynchronously.
+ * @param {HTMLInputElement} fileInput - Form file input element
+ * @returns {Promise<string>} Base64 string or empty string
+ */
+function readFileAsBase64(fileInput) {
+    return new Promise((resolve) => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) {
+            resolve("");
+            return;
         }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            resolve(e.target.result);
+        };
+        reader.onerror = function() {
+            resolve("");
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+
+// ---------- 6. FORM SUBMISSION & VALIDATION ----------
+
+/**
+ * Display a temporary alert message inside a form container.
+ * @param {string} formAlertId - Container element ID
+ * @param {string} message - Message text
+ * @param {string} type - 'error' or 'success'
+ */
+function showFormAlert(formAlertId, message, type) {
+    const alertBox = document.getElementById(formAlertId);
+    if (!alertBox) return;
+
+    alertBox.innerHTML = `
+        <div class="form-alert ${type === 'success' ? 'form-alert-success' : 'form-alert-error'}">
+            ${type === 'success' ? '✓ ' : '⚠️ '}${escapeHtml(message)}
+        </div>
+    `;
+
+    setTimeout(() => {
+        if (alertBox) alertBox.innerHTML = "";
     }, 4000);
 }
 
-// Validate and submit the Lost item form
-function handleLostForm(event) {
-    event.preventDefault(); // Stop the default form submit behavior
-
-    var form = document.getElementById("lost-form");
-    var contactNumber = form.elements["contactNumber"].value.trim();
-
-    // Simple validation: contact number must be exactly 10 digits
-    if (contactNumber.length !== 10 || isNaN(contactNumber)) {
-        showMessage("Please enter a valid 10-digit contact number.", "error", form);
-        return;
+/**
+ * Validate form inputs.
+ * @param {Object} data - Form data object
+ * @returns {string|null} Error message or null if valid
+ */
+function validateFormData(data) {
+    if (!data.name || data.name.trim() === "") {
+        return "Please enter the item name.";
+    }
+    if (!data.category || data.category === "") {
+        return "Please select a category.";
+    }
+    if (!data.date || data.date === "") {
+        return "Please select a valid date.";
+    }
+    if (!data.location || data.location.trim() === "") {
+        return "Please specify the location.";
+    }
+    if (!data.description || data.description.trim() === "") {
+        return "Please provide a short description.";
+    }
+    if (!data.contactName || data.contactName.trim() === "") {
+        return "Please enter your name.";
     }
 
-    // Read image file, then save the item
-    readImageFile(form.elements["image"], function(imageData) {
-        submitItem(form, imageData);
-    });
+    // Contact number validation: must be 10 digits
+    const phoneClean = data.contactNumber.replace(/\D/g, "");
+    if (phoneClean.length !== 10) {
+        return "Please enter a valid 10-digit mobile number (e.g. 9876543210).";
+    }
+
+    return null; // Valid
 }
 
-// Validate and submit the Found item form
-function handleFoundForm(event) {
+/**
+ * Handle form submission for Lost or Found reports.
+ * @param {Event} event - Submit event
+ * @param {string} formId - 'lost-form' or 'found-form'
+ */
+async function handleFormSubmit(event, formId) {
     event.preventDefault();
 
-    var form = document.getElementById("found-form");
-    var contactNumber = form.elements["contactNumber"].value.trim();
+    const form = document.getElementById(formId);
+    if (!form) return;
 
-    if (contactNumber.length !== 10 || isNaN(contactNumber)) {
-        showMessage("Please enter a valid 10-digit contact number.", "error", form);
+    const alertId = formId === "lost-form" ? "lost-form-alert" : "found-form-alert";
+    const previewContainerId = formId === "lost-form" ? "lost-preview-container" : "found-preview-container";
+
+    // Extract form values
+    const type = form.elements["type"].value;
+    const name = form.elements["name"].value.trim();
+    const category = form.elements["category"].value;
+    const date = form.elements["date"].value;
+    const location = form.elements["location"].value.trim();
+    const description = form.elements["description"].value.trim();
+    const contactName = form.elements["contactName"].value.trim();
+    const contactNumber = form.elements["contactNumber"].value.trim();
+    const imageInput = form.elements["image"];
+
+    // Validation
+    const validationError = validateFormData({
+        name, category, date, location, description, contactName, contactNumber
+    });
+
+    if (validationError) {
+        showFormAlert(alertId, validationError, "error");
         return;
     }
 
-    readImageFile(form.elements["image"], function(imageData) {
-        submitItem(form, imageData);
-    });
-}
+    // Read image if selected
+    const imageBase64 = await readFileAsBase64(imageInput);
 
-// Build the item object and save it to localStorage
-function submitItem(form, imageData) {
-    var items = loadItems();
-
-    // Create a new item object from the form values
-    var newItem = {
-        id: getNewId(items),
-        type: form.elements["type"].value,       // "Lost" or "Found"
-        name: form.elements["name"].value.trim(),
-        category: form.elements["category"].value,
-        description: form.elements["description"].value.trim(),
-        date: form.elements["date"].value,
-        location: form.elements["location"].value.trim(),
-        contactName: form.elements["contactName"].value.trim(),
-        contactNumber: form.elements["contactNumber"].value.trim(),
-        image: imageData,  // base64 string or empty string
+    // Fetch existing items and create new record
+    const items = getItemsFromStorage();
+    const newItem = {
+        id: generateUniqueId(items),
+        type: type, // "Lost" or "Found"
+        name: name,
+        category: category,
+        description: description,
+        date: date,
+        location: location,
+        contactName: contactName,
+        contactNumber: contactNumber,
+        image: imageBase64,
         status: "Active"
     };
 
-    // Add the new item to the array
-    items.push(newItem);
+    // Prepend new item to the beginning of the list
+    items.unshift(newItem);
 
-    // Save the updated array back to localStorage
-    saveItems(items);
+    // Save to localStorage
+    saveItemsToStorage(items);
 
-    // Show success message and reset the form
-    showMessage("Item reported successfully!", "success", form);
+    // Show success feedback
+    showFormAlert(alertId, `${type} item report submitted successfully!`, "success");
+    showToast(`Your ${type.toLowerCase()} item report has been published.`, "success");
+
+    // Reset the form and preview box
     form.reset();
+    const previewBox = document.getElementById(previewContainerId);
+    if (previewBox) {
+        previewBox.innerHTML = "";
+        previewBox.style.display = "none";
+    }
 
-    // Update stats on the home page in the background
+    // Refresh stats
     updateStats();
+
+    // After 1.2 seconds, smoothly navigate to the items gallery to see the new post
+    setTimeout(() => {
+        showSection("items");
+    }, 1200);
 }
 
 
-// ---------- 6. DISPLAY ITEMS ----------
+// ---------- 7. RENDERING ITEMS (GALLERY & HOME PREVIEW) ----------
 
-// Get the filtered search text and type filter value,
-// then build and show item cards.
-function renderItems() {
-    var items = loadItems();
-    var searchText = document.getElementById("search").value.toLowerCase().trim();
-    var filterType = document.getElementById("filter-type").value;
-    var grid = document.getElementById("items-grid");
-
-    // Filter items based on search and selected type
-    var filtered = [];
-    for (var i = 0; i < items.length; i++) {
-        var item = items[i];
-
-        // Check if item matches the search text
-        var matchesSearch = (
-            item.name.toLowerCase().includes(searchText) ||
-            item.location.toLowerCase().includes(searchText)
-        );
-
-        // Check if item matches the type filter
-        var matchesFilter = false;
-        if (filterType === "All") {
-            matchesFilter = true;
-        } else if (filterType === "Resolved") {
-            matchesFilter = (item.status === "Resolved");
-        } else {
-            matchesFilter = (item.type === filterType && item.status !== "Resolved");
-        }
-
-        if (matchesSearch && matchesFilter) {
-            filtered.push(item);
-        }
-    }
-
-    // Clear the current grid
-    grid.innerHTML = "";
-
-    if (filtered.length === 0) {
-        grid.innerHTML = '<p class="no-items">No items found.</p>';
-        return;
-    }
-
-    // Create a card for each filtered item
-    for (var j = 0; j < filtered.length; j++) {
-        grid.appendChild(createItemCard(filtered[j]));
+/**
+ * Get category icon/emoji helper.
+ * @param {string} category
+ * @returns {string} Emoji icon
+ */
+function getCategoryIcon(category) {
+    switch (category) {
+        case "Electronics": return "💻";
+        case "ID/Documents": return "🪪";
+        case "Wallets/Bags": return "👛";
+        case "Stationery/Books": return "📚";
+        case "Personal": return "🔑";
+        case "Clothing": return "👕";
+        default: return "📦";
     }
 }
 
-// Build one item card as a DOM element
-function createItemCard(item) {
-    var card = document.createElement("div");
-    card.className = "item-card";
+/**
+ * Build an individual item card DOM element.
+ * @param {Object} item - Item object
+ * @returns {HTMLElement} Card element
+ */
+function createItemCardElement(item) {
+    const card = document.createElement("div");
+    card.className = `item-card ${item.status === "Resolved" ? "is-resolved" : ""}`;
 
-    // Set badge class based on type/status
-    var badgeClass = "badge-lost";
-    var badgeText = "Lost";
+    // Status / Type badge setup
+    let badgeClass = "badge-lost";
+    let badgeLabel = "Lost Item";
+    let badgeIcon = "🔴";
+
     if (item.status === "Resolved") {
         badgeClass = "badge-resolved";
-        badgeText = "Resolved";
+        badgeLabel = "Resolved";
+        badgeIcon = "✅";
     } else if (item.type === "Found") {
         badgeClass = "badge-found";
-        badgeText = "Found";
+        badgeLabel = "Found Item";
+        badgeIcon = "🟢";
     }
 
-    // If an image is stored, show it on the card
-    var imgHtml = "";
-    if (item.image) {
-        imgHtml = '<img src="' + item.image + '" alt="Item image">';
+    // Media: image or clean placeholder
+    let mediaHtml = "";
+    if (item.image && item.image.trim() !== "") {
+        mediaHtml = `<img src="${item.image}" alt="${escapeHtml(item.name)}">`;
+    } else {
+        mediaHtml = `<span class="card-placeholder-icon">${getCategoryIcon(item.category)}</span>`;
     }
 
-    // Build the card HTML
-    card.innerHTML =
-        imgHtml +
-        '<span class="badge ' + badgeClass + '">' + badgeText + '</span>' +
-        '<h3>' + escapeHtml(item.name) + '</h3>' +
-        '<p class="card-category">' + escapeHtml(item.category) + '</p>' +
-        '<p class="card-desc">' + escapeHtml(item.description) + '</p>' +
-        '<p class="card-meta">' + escapeHtml(item.location) + ' &bull; ' + item.date + '</p>';
+    // Resolve button HTML (only if not already resolved)
+    let resolveBtnHtml = "";
+    if (item.status !== "Resolved") {
+        resolveBtnHtml = `
+            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); markItemAsResolved(${item.id})">
+                ✓ Resolve
+            </button>
+        `;
+    }
 
-    // When the card is clicked, open the item detail modal
-    card.addEventListener("click", function() {
-        openModal(item.id);
-    });
+    card.innerHTML = `
+        <div class="card-media">
+            ${mediaHtml}
+            <div class="card-badge-container">
+                <span class="badge ${badgeClass}">
+                    <span>${badgeIcon}</span> ${badgeLabel}
+                </span>
+            </div>
+        </div>
+        <div class="card-body">
+            <span class="card-category">${getCategoryIcon(item.category)} ${escapeHtml(item.category)}</span>
+            <h3 class="card-title">${escapeHtml(item.name)}</h3>
+            <p class="card-desc">${escapeHtml(item.description)}</p>
+            <ul class="card-meta-list">
+                <li><span>📍</span> <strong>Location:</strong> ${escapeHtml(item.location)}</li>
+                <li><span>📅</span> <strong>Date:</strong> ${formatDate(item.date)}</li>
+                <li><span>👤</span> <strong>Contact:</strong> ${escapeHtml(item.contactName)}</li>
+            </ul>
+            <div class="card-actions">
+                <button class="btn btn-outline btn-sm" onclick="openModal(${item.id})">
+                    View Details
+                </button>
+                ${resolveBtnHtml}
+            </div>
+        </div>
+    `;
 
     return card;
 }
 
-// Simple helper to prevent XSS — replace special characters
-function escapeHtml(text) {
-    var div = document.createElement("div");
-    div.appendChild(document.createTextNode(text));
-    return div.innerHTML;
+/**
+ * Render items in the main gallery based on search, status tab, and category filter.
+ */
+function renderItems() {
+    const items = getItemsFromStorage();
+    const searchInput = document.getElementById("search");
+    const categorySelect = document.getElementById("filter-category");
+    const grid = document.getElementById("items-grid");
+    const resultsSummary = document.getElementById("results-count-text");
+    const clearSearchBtn = document.getElementById("clear-search");
+    const resetFiltersBtn = document.getElementById("reset-all-filters");
+
+    if (!grid) return;
+
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
+    const selectedCategory = categorySelect ? categorySelect.value : "All";
+
+    // Show or hide clear button inside search box
+    if (clearSearchBtn) {
+        clearSearchBtn.style.display = query.length > 0 ? "block" : "none";
+    }
+
+    // Filter items
+    const filteredItems = items.filter(item => {
+        // 1. Search Query match (searches name, location, and description)
+        const matchesSearch = query === "" ||
+            item.name.toLowerCase().includes(query) ||
+            item.location.toLowerCase().includes(query) ||
+            item.description.toLowerCase().includes(query) ||
+            item.category.toLowerCase().includes(query);
+
+        // 2. Status / Type Filter tab match
+        let matchesType = false;
+        if (currentFilterType === "All") {
+            matchesType = true;
+        } else if (currentFilterType === "Resolved") {
+            matchesType = (item.status === "Resolved");
+        } else {
+            // Lost or Found active items
+            matchesType = (item.type === currentFilterType && item.status !== "Resolved");
+        }
+
+        // 3. Category Dropdown match
+        let matchesCategory = false;
+        if (selectedCategory === "All" || item.category === selectedCategory) {
+            matchesCategory = true;
+        }
+
+        return matchesSearch && matchesType && matchesCategory;
+    });
+
+    // Clear grid
+    grid.innerHTML = "";
+
+    // Show summary text
+    if (resultsSummary) {
+        const filterName = currentFilterType === "All" ? "Total" : currentFilterType;
+        resultsSummary.textContent = `Showing ${filteredItems.length} of ${items.length} items (${filterName})`;
+    }
+
+    // Show reset button if any filter is active
+    if (resetFiltersBtn) {
+        const isFiltered = query !== "" || currentFilterType !== "All" || selectedCategory !== "All";
+        resetFiltersBtn.style.display = isFiltered ? "inline-block" : "none";
+    }
+
+    // If empty
+    if (filteredItems.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">🔎</div>
+                <h3>No Matching Items Found</h3>
+                <p>We couldn't find any lost or found items matching your current search and filter criteria.</p>
+                <button class="btn btn-secondary btn-sm" onclick="resetFilters()">Clear Filters</button>
+            </div>
+        `;
+        return;
+    }
+
+    // Append cards
+    filteredItems.forEach(item => {
+        grid.appendChild(createItemCardElement(item));
+    });
+
+    // Keep statistics numbers in sync
+    updateStats();
+}
+
+/**
+ * Render the 3 most recent items on the Home Page preview section.
+ */
+function renderRecentItems() {
+    const recentGrid = document.getElementById("recent-items-grid");
+    if (!recentGrid) return;
+
+    const items = getItemsFromStorage();
+    recentGrid.innerHTML = "";
+
+    if (items.length === 0) {
+        recentGrid.innerHTML = `
+            <div class="empty-state">
+                <p>No items reported yet. Be the first to report a lost or found item!</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Take the first 3 items
+    const recentList = items.slice(0, 3);
+    recentList.forEach(item => {
+        recentGrid.appendChild(createItemCardElement(item));
+    });
 }
 
 
-// ---------- 7. MODAL (ITEM DETAILS) ----------
+// ---------- 8. FILTER & SEARCH CONTROL HELPERS ----------
 
-// Find the item with the given id and display its full details in the modal
-function openModal(itemId) {
-    var items = loadItems();
-    var item = null;
+/**
+ * Set the current status tab filter ('All', 'Lost', 'Found', 'Resolved').
+ * @param {string} filterType
+ */
+function setFilterType(filterType) {
+    currentFilterType = filterType;
 
-    // Find the item with matching id
-    for (var i = 0; i < items.length; i++) {
-        if (items[i].id === itemId) {
-            item = items[i];
-            break;
+    // Update tab button classes
+    const tabs = ["All", "Lost", "Found", "Resolved"];
+    tabs.forEach(tab => {
+        const btn = document.getElementById(`tab-${tab}`);
+        if (btn) {
+            if (tab === filterType) {
+                btn.classList.add("active");
+            } else {
+                btn.classList.remove("active");
+            }
         }
+    });
+
+    renderItems();
+}
+
+/**
+ * Clear the search box input and refresh results.
+ */
+function clearSearch() {
+    const searchInput = document.getElementById("search");
+    if (searchInput) {
+        searchInput.value = "";
+        renderItems();
+        searchInput.focus();
     }
+}
+
+/**
+ * Reset all filters (search, tab, category dropdown) back to default.
+ */
+function resetFilters() {
+    const searchInput = document.getElementById("search");
+    const categorySelect = document.getElementById("filter-category");
+
+    if (searchInput) searchInput.value = "";
+    if (categorySelect) categorySelect.value = "All";
+
+    setFilterType("All");
+}
+
+
+// ---------- 9. ITEM DETAILS MODAL & RESOLVE ACTION ----------
+
+/**
+ * Open the detailed view modal for a given item ID.
+ * @param {number} itemId - ID of the item
+ */
+function openModal(itemId) {
+    const items = getItemsFromStorage();
+    const item = items.find(i => i.id === itemId);
 
     if (!item) return;
 
-    var modalBody = document.getElementById("modal-body");
+    const modalBody = document.getElementById("modal-body");
+    const modal = document.getElementById("item-modal");
 
-    // Decide the badge text and button for resolve
-    var badgeClass = (item.type === "Lost") ? "badge-lost" : "badge-found";
-    if (item.status === "Resolved") {
-        badgeClass = "badge-resolved";
+    if (!modalBody || !modal) return;
+
+    // Badges setup
+    let typeBadgeClass = item.type === "Lost" ? "badge-lost" : "badge-found";
+    let statusBadgeClass = item.status === "Resolved" ? "badge-resolved" : "badge-found";
+
+    // Media HTML
+    let mediaHtml = "";
+    if (item.image && item.image.trim() !== "") {
+        mediaHtml = `
+            <div class="modal-media">
+                <img src="${item.image}" alt="${escapeHtml(item.name)}">
+            </div>
+        `;
     }
 
-    var resolveButtonHTML = "";
+    // Resolve Button
+    let resolveButtonHtml = "";
     if (item.status !== "Resolved") {
-        resolveButtonHTML =
-            '<button class="resolve-btn" onclick="markResolved(' + item.id + ')">Mark as Resolved</button>';
+        resolveButtonHtml = `
+            <button class="btn btn-success" onclick="markItemAsResolved(${item.id})">
+                ✓ Mark as Resolved / Returned
+            </button>
+        `;
     } else {
-        resolveButtonHTML =
-            '<button class="resolve-btn resolved" disabled>✓ Resolved</button>';
+        resolveButtonHtml = `
+            <button class="btn btn-secondary" disabled style="cursor:default;">
+                ✓ This item is marked as Resolved
+            </button>
+        `;
     }
 
-    var imgHtml = "";
-    if (item.image) {
-        imgHtml = '<img src="' + item.image + '" alt="' + escapeHtml(item.name) + '">';
-    }
+    modalBody.innerHTML = `
+        <div class="modal-header-badges">
+            <span class="badge ${typeBadgeClass}">
+                ${item.type === "Lost" ? "🔴 Lost Item" : "🟢 Found Item"}
+            </span>
+            <span class="badge ${statusBadgeClass}">
+                Status: ${item.status}
+            </span>
+        </div>
 
-    var badgeLabel = (item.status === "Resolved") ? "Resolved" : item.type;
+        ${mediaHtml}
 
-    modalBody.innerHTML =
-        imgHtml +
-        '<span class="badge ' + badgeClass + '" style="margin-bottom:12px;display:inline-block;">' + badgeLabel + '</span>' +
-        '<h2 style="text-align:left;margin-bottom:16px;">' + escapeHtml(item.name) + '</h2>' +
-        '<div class="detail-row"><strong>Category:</strong> ' + escapeHtml(item.category) + '</div>' +
-        '<div class="detail-row"><strong>Description:</strong> ' + escapeHtml(item.description) + '</div>' +
-        '<div class="detail-row"><strong>Date:</strong> ' + item.date + '</div>' +
-        '<div class="detail-row"><strong>Location:</strong> ' + escapeHtml(item.location) + '</div>' +
-        '<div class="detail-row"><strong>Contact Name:</strong> ' + escapeHtml(item.contactName) + '</div>' +
-        '<div class="detail-row"><strong>Contact Number:</strong> ' + escapeHtml(item.contactNumber) + '</div>' +
-        '<div class="detail-row"><strong>Status:</strong> ' + item.status + '</div>' +
-        resolveButtonHTML;
+        <h2 id="modal-title" class="modal-title">${escapeHtml(item.name)}</h2>
 
-    // Show the modal
-    document.getElementById("item-modal").style.display = "flex";
+        <div class="modal-desc-box">
+            <strong>Description:</strong><br>
+            ${escapeHtml(item.description)}
+        </div>
+
+        <table class="modal-details-table">
+            <tbody>
+                <tr>
+                    <th>Category</th>
+                    <td>${getCategoryIcon(item.category)} ${escapeHtml(item.category)}</td>
+                </tr>
+                <tr>
+                    <th>Location</th>
+                    <td>📍 ${escapeHtml(item.location)}</td>
+                </tr>
+                <tr>
+                    <th>Date Reported</th>
+                    <td>📅 ${formatDate(item.date)}</td>
+                </tr>
+                <tr>
+                    <th>Contact Person</th>
+                    <td>👤 ${escapeHtml(item.contactName)}</td>
+                </tr>
+                <tr>
+                    <th>Contact Number</th>
+                    <td>📞 <a href="tel:${escapeHtml(item.contactNumber)}" style="color:var(--primary-light);font-weight:700;">${escapeHtml(item.contactNumber)}</a></td>
+                </tr>
+                <tr>
+                    <th>Current Status</th>
+                    <td><strong>${escapeHtml(item.status)}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="modal-actions">
+            ${resolveButtonHtml}
+            <a href="tel:${escapeHtml(item.contactNumber)}" class="btn btn-primary">
+                📞 Call Contact
+            </a>
+            <button class="btn btn-secondary" onclick="closeModal()">
+                Close
+            </button>
+        </div>
+    `;
+
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden"; // Prevent background scrolling
 }
 
-// Close the modal when user clicks X or clicks outside
+/**
+ * Close the item details modal.
+ */
 function closeModal() {
-    document.getElementById("item-modal").style.display = "none";
+    const modal = document.getElementById("item-modal");
+    if (modal) {
+        modal.style.display = "none";
+        document.body.style.overflow = "auto";
+    }
 }
 
+/**
+ * Change the status of an item to 'Resolved'.
+ * @param {number} itemId - ID of item to resolve
+ */
+function markItemAsResolved(itemId) {
+    if (!confirm("Are you sure you want to mark this item as Resolved / Handed Over?")) {
+        return;
+    }
 
-// ---------- 8. MARK AS RESOLVED ----------
+    const items = getItemsFromStorage();
+    let found = false;
 
-// Change the status of an item to "Resolved" and save
-function markResolved(itemId) {
-    var items = loadItems();
-
-    // Find the item and update its status
-    for (var i = 0; i < items.length; i++) {
+    for (let i = 0; i < items.length; i++) {
         if (items[i].id === itemId) {
             items[i].status = "Resolved";
+            found = true;
             break;
         }
     }
 
-    saveItems(items);    // Save updated list
-    closeModal();        // Close modal
-    renderItems();       // Refresh the items grid
-    updateStats();       // Refresh statistics
-
-    alert("Item has been marked as Resolved!");
+    if (found) {
+        saveItemsToStorage(items);
+        updateStats();
+        renderItems();
+        renderRecentItems();
+        closeModal();
+        showToast("Item status updated to Resolved! ✓", "success");
+    }
 }
 
 
-// ---------- 9. EVENT LISTENERS & PAGE INIT ----------
+// ---------- 10. TOAST NOTIFICATIONS ----------
 
-// Wait for the entire HTML page to load before running our code
+/**
+ * Display a floating toast notification.
+ * @param {string} message - Message text
+ * @param {string} type - 'success' or 'info'
+ */
+function showToast(message, type = "info") {
+    const toast = document.getElementById("toast");
+    if (!toast) return;
+
+    toast.innerHTML = `${type === "success" ? "✓" : "ℹ"} ${escapeHtml(message)}`;
+    toast.classList.add("show");
+
+    setTimeout(() => {
+        toast.classList.remove("show");
+    }, 3500);
+}
+
+
+// ---------- 11. STRING & DATE UTILITY FUNCTIONS ----------
+
+/**
+ * Escape HTML special characters to prevent XSS injection.
+ * @param {string} str - Raw text string
+ * @returns {string} Sanitized string
+ */
+function escapeHtml(str) {
+    if (!str) return "";
+    const div = document.createElement("div");
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+
+/**
+ * Format ISO date (YYYY-MM-DD) into readable format (e.g., 23 Sep 2026).
+ * @param {string} dateStr - 'YYYY-MM-DD'
+ * @returns {string} Formatted date
+ */
+function formatDate(dateStr) {
+    if (!dateStr) return "N/A";
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return dateStr;
+
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const year = parts[0];
+    const monthIndex = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+
+    if (monthIndex >= 0 && monthIndex < 12) {
+        return `${day} ${months[monthIndex]} ${year}`;
+    }
+    return dateStr;
+}
+
+
+// ---------- 12. INITIALIZATION & EVENT LISTENERS ----------
+
 document.addEventListener("DOMContentLoaded", function() {
 
-    // Attach Lost form submit handler
-    document.getElementById("lost-form").addEventListener("submit", handleLostForm);
+    // 1. Set max date on date inputs to today's date so users can't pick future dates
+    const todayStr = new Date().toISOString().split("T")[0];
+    const lostDateInput = document.getElementById("lost-date");
+    const foundDateInput = document.getElementById("found-date");
+    if (lostDateInput) lostDateInput.setAttribute("max", todayStr);
+    if (foundDateInput) foundDateInput.setAttribute("max", todayStr);
 
-    // Attach Found form submit handler
-    document.getElementById("found-form").addEventListener("submit", handleFoundForm);
+    // 2. Attach Form Submission Event Listeners
+    const lostForm = document.getElementById("lost-form");
+    if (lostForm) {
+        lostForm.addEventListener("submit", (e) => handleFormSubmit(e, "lost-form"));
+    }
 
-    // Search box: filter items as the user types
-    document.getElementById("search").addEventListener("input", renderItems);
+    const foundForm = document.getElementById("found-form");
+    if (foundForm) {
+        foundForm.addEventListener("submit", (e) => handleFormSubmit(e, "found-form"));
+    }
 
-    // Close modal if user clicks on the dark background (outside the box)
-    document.getElementById("item-modal").addEventListener("click", function(event) {
-        if (event.target === this) {
+    // 3. Close modal when pressing the Escape key
+    document.addEventListener("keydown", function(e) {
+        if (e.key === "Escape") {
             closeModal();
         }
     });
 
-    // Load statistics on first render
+    // 4. Handle initial URL Hash Navigation (e.g. #items, #report-lost)
+    const hash = window.location.hash.replace("#", "");
+    if (["home", "report-lost", "report-found", "items"].includes(hash)) {
+        showSection(hash);
+    } else {
+        showSection("home");
+    }
+
+    // 5. Initial Data Loading & UI Render
     updateStats();
+    renderRecentItems();
 });

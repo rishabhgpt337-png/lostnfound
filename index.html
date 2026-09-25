@@ -5,106 +5,383 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Campus Lost & Found Portal</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Simple icon support via unicode characters or basic CSS -->
 </head>
 <body>
-    <nav>
-        <div class="logo">Campus Lost & Found</div>
-        <ul>
-            <li><a href="#home" onclick="showSection('home')">Home</a></li>
-            <li><a href="#report-lost" onclick="showSection('report-lost')">Report Lost</a></li>
-            <li><a href="#report-found" onclick="showSection('report-found')">Report Found</a></li>
-            <li><a href="#items" onclick="showSection('items')">View Items</a></li>
-        </ul>
-    </nav>
 
-    <main>
-        <section id="home" class="active">
-            <h1>Welcome to Campus Lost & Found</h1>
-            <p>Help your fellow students find their lost belongings or report found items easily.</p>
+    <!-- ==========================================
+         NAVIGATION BAR
+         ========================================== -->
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="#home" class="logo" onclick="showSection('home')">
+                    <span class="logo-icon">🔍</span>
+                    <span class="logo-text">Campus<strong>Lost&Found</strong></span>
+                </a>
+                <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" onclick="toggleMobileNav()">
+                    ☰
+                </button>
+                <ul class="nav-menu" id="nav-menu">
+                    <li><a href="#home" id="nav-home" class="active" onclick="showSection('home')">Home</a></li>
+                    <li><a href="#report-lost" id="nav-report-lost" onclick="showSection('report-lost')">Report Lost</a></li>
+                    <li><a href="#report-found" id="nav-report-found" onclick="showSection('report-found')">Report Found</a></li>
+                    <li><a href="#items" id="nav-items" onclick="showSection('items')">View All Items</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
 
-            <div class="stats-container">
-                <div class="stat-card"><h3>Lost Items</h3><p id="total-lost">0</p></div>
-                <div class="stat-card"><h3>Found Items</h3><p id="total-found">0</p></div>
-                <div class="stat-card"><h3>Resolved</h3><p id="total-resolved">0</p></div>
+    <main class="main-content">
+
+        <!-- ==========================================
+             1. HOME SECTION
+             ========================================== -->
+        <section id="home" class="section active">
+            <!-- Hero Banner -->
+            <div class="hero-card">
+                <div class="hero-badge">College Student Utility Portal</div>
+                <h1>Lost Something on Campus?</h1>
+                <p>Don't worry! Report your lost belongings or help fellow students recover items found across college classrooms, library, canteen, and campus grounds.</p>
+                <div class="hero-actions">
+                    <button class="btn btn-danger" onclick="showSection('report-lost')">
+                        <span>📢</span> Report Lost Item
+                    </button>
+                    <button class="btn btn-success" onclick="showSection('report-found')">
+                        <span>🎁</span> Report Found Item
+                    </button>
+                    <button class="btn btn-primary" onclick="showSection('items')">
+                        <span>🔎</span> Browse All Items
+                    </button>
+                </div>
             </div>
 
-            <div class="hero-actions">
-                <button onclick="showSection('report-lost')">Report Lost Item</button>
-                <button onclick="showSection('report-found')">Report Found Item</button>
-                <button onclick="showSection('items')">View All Items</button>
+            <!-- Live Statistics -->
+            <div class="section-title-wrap">
+                <h2>Portal Activity Overview</h2>
+                <p>Live status of items reported inside the campus</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card stat-lost" onclick="filterAndShow('Lost')">
+                    <div class="stat-icon">🔴</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Active Lost Items</span>
+                        <h3 id="total-lost" class="stat-number">0</h3>
+                    </div>
+                </div>
+                <div class="stat-card stat-found" onclick="filterAndShow('Found')">
+                    <div class="stat-icon">🟢</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Active Found Items</span>
+                        <h3 id="total-found" class="stat-number">0</h3>
+                    </div>
+                </div>
+                <div class="stat-card stat-resolved" onclick="filterAndShow('Resolved')">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Resolved / Returned</span>
+                        <h3 id="total-resolved" class="stat-number">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- How It Works -->
+            <div class="how-it-works">
+                <h3>How It Works</h3>
+                <div class="steps-grid">
+                    <div class="step-card">
+                        <div class="step-number">1</div>
+                        <h4>Report an Item</h4>
+                        <p>Fill in the item details, location, date, and your contact number with an optional photo.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">2</div>
+                        <h4>Search & Match</h4>
+                        <p>Browse the items gallery or search by keywords and location to check if your item was found.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">3</div>
+                        <h4>Claim & Resolve</h4>
+                        <p>Contact the person, verify ownership, collect the item, and mark the status as resolved.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Items Preview -->
+            <div class="recent-header">
+                <div class="section-title-wrap text-left">
+                    <h2>Recent Reports</h2>
+                    <p>Latest lost and found notices posted by students</p>
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="showSection('items')">View All →</button>
+            </div>
+            <div id="recent-items-grid" class="items-grid"></div>
+        </section>
+
+
+        <!-- ==========================================
+             2. REPORT LOST ITEM SECTION
+             ========================================== -->
+        <section id="report-lost" class="section">
+            <div class="form-container">
+                <div class="form-header">
+                    <span class="form-badge badge-lost">Lost Item Report</span>
+                    <h2>Report a Lost Item</h2>
+                    <p>Provide detailed information so anyone who finds your item can easily identify and return it.</p>
+                </div>
+
+                <div id="lost-form-alert"></div>
+
+                <form id="lost-form" novalidate>
+                    <input type="hidden" name="type" value="Lost">
+
+                    <div class="form-group">
+                        <label for="lost-name">Item Name <span class="req">*</span></label>
+                        <input type="text" id="lost-name" name="name" placeholder="e.g. Black Leather Wallet, Casio Calculator, Blue Water Bottle" required>
+                        <small class="field-hint">Be clear and specific about the item.</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="lost-category">Category <span class="req">*</span></label>
+                            <select id="lost-category" name="category" required>
+                                <option value="">Select a Category</option>
+                                <option value="Electronics">💻 Electronics (Phone, Charger, Earphones, Calculator)</option>
+                                <option value="ID/Documents">🪪 ID Cards & Documents (College ID, Files, Notebooks)</option>
+                                <option value="Wallets/Bags">👛 Wallets & Bags (Pouch, Backpack, Purse)</option>
+                                <option value="Stationery/Books">📚 Books & Stationery (Textbooks, Geometry Box)</option>
+                                <option value="Personal">🔑 Personal Belongings (Keys, Water Bottle, Glasses)</option>
+                                <option value="Clothing">👕 Clothing & Accessories (Jacket, Umbrella, Watch)</option>
+                                <option value="Other">📦 Other Items</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group half">
+                            <label for="lost-date">Date Lost <span class="req">*</span></label>
+                            <input type="date" id="lost-date" name="date" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lost-location">Last Seen Location <span class="req">*</span></label>
+                        <input type="text" id="lost-location" name="location" placeholder="e.g. Library 2nd Floor, Canteen Table 4, Lab 204" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lost-description">Item Description <span class="req">*</span></label>
+                        <textarea id="lost-description" name="description" rows="3" placeholder="Describe color, brand, unique stickers, scratches, contents, or identifying marks..." required></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="lost-contactName">Your Name <span class="req">*</span></label>
+                            <input type="text" id="lost-contactName" name="contactName" placeholder="e.g. Rahul Sharma" required>
+                        </div>
+
+                        <div class="form-group half">
+                            <label for="lost-contactNumber">Contact Number (10 Digits) <span class="req">*</span></label>
+                            <input type="tel" id="lost-contactNumber" name="contactNumber" placeholder="e.g. 9876543210" maxlength="10" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lost-image">Upload Photo (Optional)</label>
+                        <input type="file" id="lost-image" name="image" accept="image/*" onchange="previewImage(this, 'lost-preview-container')">
+                        <small class="field-hint">Upload a clear photo (JPG/PNG under 1MB). Stored safely in localStorage.</small>
+                        <div id="lost-preview-container" class="image-preview-box" style="display:none;"></div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="showSection('home')">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Submit Lost Report</button>
+                    </div>
+                </form>
             </div>
         </section>
 
-        <section id="report-lost">
-            <h2>Report Lost Item</h2>
-            <form id="lost-form">
-                <input type="hidden" name="type" value="Lost">
-                <input type="text" name="name" placeholder="Item Name" required>
-                <select name="category" required>
-                    <option value="">Select Category</option>
-                    <option value="Electronics">Electronics</option>
-                    <option value="ID/Documents">ID/Documents</option>
-                    <option value="Wallets/Bags">Wallets/Bags</option>
-                    <option value="Personal">Personal</option>
-                    <option value="Other">Other</option>
-                </select>
-                <textarea name="description" placeholder="Short description" required></textarea>
-                <input type="date" name="date" required>
-                <input type="text" name="location" placeholder="Where did you lose it?" required>
-                <input type="text" name="contactName" placeholder="Your Name" required>
-                <input type="tel" name="contactNumber" placeholder="Contact Number (10 digits)" pattern="[0-9]{10}" required>
-                <input type="file" name="image" accept="image/*">
-                <button type="submit">Submit Lost Report</button>
-            </form>
-        </section>
 
-        <section id="report-found">
-            <h2>Report Found Item</h2>
-            <form id="found-form">
-                <input type="hidden" name="type" value="Found">
-                <input type="text" name="name" placeholder="Item Name" required>
-                <select name="category" required>
-                    <option value="">Select Category</option>
-                    <option value="Electronics">Electronics</option>
-                    <option value="ID/Documents">ID/Documents</option>
-                    <option value="Wallets/Bags">Wallets/Bags</option>
-                    <option value="Personal">Personal</option>
-                    <option value="Other">Other</option>
-                </select>
-                <textarea name="description" placeholder="Description of the item" required></textarea>
-                <input type="date" name="date" required>
-                <input type="text" name="location" placeholder="Where did you find it?" required>
-                <input type="text" name="contactName" placeholder="Your Name" required>
-                <input type="tel" name="contactNumber" placeholder="Contact Number (10 digits)" pattern="[0-9]{10}" required>
-                <input type="file" name="image" accept="image/*">
-                <button type="submit">Submit Found Report</button>
-            </form>
-        </section>
+        <!-- ==========================================
+             3. REPORT FOUND ITEM SECTION
+             ========================================== -->
+        <section id="report-found" class="section">
+            <div class="form-container">
+                <div class="form-header">
+                    <span class="form-badge badge-found">Found Item Report</span>
+                    <h2>Report a Found Item</h2>
+                    <p>Found something on campus? Post the details here so the rightful owner can contact you and claim it.</p>
+                </div>
 
-        <section id="items">
-            <h2>Lost & Found Items</h2>
-            <div class="filters">
-                <input type="text" id="search" placeholder="Search by name or location...">
-                <select id="filter-type" onchange="renderItems()">
-                    <option value="All">All Items</option>
-                    <option value="Lost">Lost</option>
-                    <option value="Found">Found</option>
-                    <option value="Resolved">Resolved</option>
-                </select>
+                <div id="found-form-alert"></div>
+
+                <form id="found-form" novalidate>
+                    <input type="hidden" name="type" value="Found">
+
+                    <div class="form-group">
+                        <label for="found-name">Item Name <span class="req">*</span></label>
+                        <input type="text" id="found-name" name="name" placeholder="e.g. Blue Milton Water Bottle, College ID Card" required>
+                        <small class="field-hint">Short and descriptive name of what you found.</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="found-category">Category <span class="req">*</span></label>
+                            <select id="found-category" name="category" required>
+                                <option value="">Select a Category</option>
+                                <option value="Electronics">💻 Electronics (Phone, Charger, Earphones, Calculator)</option>
+                                <option value="ID/Documents">🪪 ID Cards & Documents (College ID, Files, Notebooks)</option>
+                                <option value="Wallets/Bags">👛 Wallets & Bags (Pouch, Backpack, Purse)</option>
+                                <option value="Stationery/Books">📚 Books & Stationery (Textbooks, Geometry Box)</option>
+                                <option value="Personal">🔑 Personal Belongings (Keys, Water Bottle, Glasses)</option>
+                                <option value="Clothing">👕 Clothing & Accessories (Jacket, Umbrella, Watch)</option>
+                                <option value="Other">📦 Other Items</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group half">
+                            <label for="found-date">Date Found <span class="req">*</span></label>
+                            <input type="date" id="found-date" name="date" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="found-location">Where was it found? <span class="req">*</span></label>
+                        <input type="text" id="found-location" name="location" placeholder="e.g. Near Library entrance, Gymkhana, Ground floor bench" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="found-description">Item Description <span class="req">*</span></label>
+                        <textarea id="found-description" name="description" rows="3" placeholder="Describe the item condition, color, and where it is currently kept (e.g. with Security Guard or with you)..." required></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="found-contactName">Found By / Handed to <span class="req">*</span></label>
+                            <input type="text" id="found-contactName" name="contactName" placeholder="e.g. Priya Mehta (FYBSc IT)" required>
+                        </div>
+
+                        <div class="form-group half">
+                            <label for="found-contactNumber">Contact Number (10 Digits) <span class="req">*</span></label>
+                            <input type="tel" id="found-contactNumber" name="contactNumber" placeholder="e.g. 9123456789" maxlength="10" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="found-image">Upload Photo (Optional)</label>
+                        <input type="file" id="found-image" name="image" accept="image/*" onchange="previewImage(this, 'found-preview-container')">
+                        <small class="field-hint">Upload a photo to help the owner verify their item quickly.</small>
+                        <div id="found-preview-container" class="image-preview-box" style="display:none;"></div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="showSection('home')">Cancel</button>
+                        <button type="submit" class="btn btn-success">Submit Found Report</button>
+                    </div>
+                </form>
             </div>
+        </section>
+
+
+        <!-- ==========================================
+             4. VIEW ALL ITEMS SECTION
+             ========================================== -->
+        <section id="items" class="section">
+            <div class="items-page-header">
+                <div class="section-title-wrap text-left">
+                    <h2>Lost & Found Gallery</h2>
+                    <p>Search, filter, and view all active and resolved campus items.</p>
+                </div>
+                <div class="quick-report-btns">
+                    <button class="btn btn-danger btn-sm" onclick="showSection('report-lost')">+ Report Lost</button>
+                    <button class="btn btn-success btn-sm" onclick="showSection('report-found')">+ Report Found</button>
+                </div>
+            </div>
+
+            <!-- Search & Filter Controls -->
+            <div class="filter-panel">
+                <div class="search-box-wrap">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search" placeholder="Search by item name, location, or description..." oninput="renderItems()">
+                    <button class="clear-search-btn" id="clear-search" onclick="clearSearch()" style="display:none;">✕</button>
+                </div>
+
+                <div class="filter-controls-row">
+                    <!-- Status Filter Tabs -->
+                    <div class="filter-tabs">
+                        <button class="tab-btn active" id="tab-All" onclick="setFilterType('All')">All (<span id="count-all">0</span>)</button>
+                        <button class="tab-btn" id="tab-Lost" onclick="setFilterType('Lost')">Lost (<span id="count-lost">0</span>)</button>
+                        <button class="tab-btn" id="tab-Found" onclick="setFilterType('Found')">Found (<span id="count-found">0</span>)</button>
+                        <button class="tab-btn" id="tab-Resolved" onclick="setFilterType('Resolved')">Resolved (<span id="count-resolved">0</span>)</button>
+                    </div>
+
+                    <!-- Category Dropdown Filter -->
+                    <div class="category-filter-wrap">
+                        <select id="filter-category" onchange="renderItems()">
+                            <option value="All">All Categories</option>
+                            <option value="Electronics">💻 Electronics</option>
+                            <option value="ID/Documents">🪪 ID Cards & Documents</option>
+                            <option value="Wallets/Bags">👛 Wallets & Bags</option>
+                            <option value="Stationery/Books">📚 Books & Stationery</option>
+                            <option value="Personal">🔑 Personal</option>
+                            <option value="Clothing">👕 Clothing</option>
+                            <option value="Other">📦 Other</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Filter Label & Counter -->
+            <div class="results-summary">
+                <span id="results-count-text">Showing items...</span>
+                <button id="reset-all-filters" class="link-btn" onclick="resetFilters()" style="display:none;">Reset all filters</button>
+            </div>
+
+            <!-- Items Cards Grid -->
             <div id="items-grid" class="items-grid"></div>
         </section>
+
     </main>
 
-    <!-- Modal -->
-    <div id="item-modal" class="modal" style="display:none;">
+
+    <!-- ==========================================
+         ITEM DETAILS MODAL
+         ========================================== -->
+    <div id="item-modal" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-backdrop" onclick="closeModal()"></div>
         <div class="modal-content">
-            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <button class="close-modal" onclick="closeModal()" aria-label="Close modal">&times;</button>
             <div id="modal-body"></div>
         </div>
     </div>
 
+
+    <!-- ==========================================
+         TOAST NOTIFICATION CONTAINER
+         ========================================== -->
+    <div id="toast" class="toast"></div>
+
+
+    <!-- ==========================================
+         FOOTER
+         ========================================== -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <span class="logo-icon">🔍</span>
+                <strong>Campus Lost & Found Portal</strong>
+                <p>An FYBSc IT "Introduction to Programming" Course Project</p>
+            </div>
+            <div class="footer-links">
+                <button class="btn-demo-reset" onclick="resetToSampleData()" title="Reset data to default sample demonstration items">
+                    🔄 Reset Sample Demo Data
+                </button>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Campus Lost & Found. Built with HTML, CSS, and Vanilla JavaScript (localStorage).</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript logic -->
     <script src="script.js"></script>
 </body>
 </html>
