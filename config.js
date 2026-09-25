@@ -15,11 +15,11 @@
 // ============================================================
 
 const SUPABASE_CONFIG = {
-    // Replace with your actual Supabase Project URL (e.g., https://xyzcompany.supabase.co)
-    SUPABASE_URL: "YOUR_SUPABASE_PROJECT_URL",
+    // Supabase Project URL
+    SUPABASE_URL: "https://dpxjkvvqhtusbbvzqwbw.supabase.co",
 
-    // Replace with your actual Supabase Public Anon Key (starts with eyJhbGci...)
-    SUPABASE_ANON_KEY: "YOUR_SUPABASE_ANON_KEY"
+    // Supabase Public Anon Key (safe to expose — RLS policies restrict access)
+    SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRweGprdnZxaHR1c2Jidnpxd2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNjI0NzIsImV4cCI6MjEwNTkzODQ3Mn0.qiwGrypBuUcvFKxot9PBQzRt9Wdl8RZEIhFsthq8GfE"
 };
 
 // Check if valid credentials are provided
