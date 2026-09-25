@@ -34,6 +34,11 @@
     <main class="main-content">
 
         <!-- ==========================================
+             DATABASE CONNECTION ALERT
+             ========================================== -->
+        <div id="db-connection-banner" class="db-banner" style="display:none;"></div>
+
+        <!-- ==========================================
              1. HOME SECTION
              ========================================== -->
         <section id="home" class="section active">
@@ -371,9 +376,8 @@
                 <p>An FYBSc IT "Introduction to Programming" Course Project</p>
             </div>
             <div class="footer-links">
-                <button class="btn-demo-reset" onclick="resetToSampleData()" title="Reset data to default sample demonstration items">
-                    🔄 Reset Sample Demo Data
-                </button>
+                <a href="#home" onclick="showSection('home')" style="color:#eff6ff; text-decoration:none;">Home</a> &nbsp;| &nbsp;
+                <a href="#items" onclick="showSection('items')" style="color:#eff6ff; text-decoration:none;">View Items</a>
             </div>
         </div>
         <div class="footer-bottom">
@@ -382,6 +386,8 @@
     </footer>
 
     <!-- JavaScript logic -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

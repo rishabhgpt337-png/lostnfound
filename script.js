@@ -2,227 +2,174 @@
 //  Campus Lost & Found Portal — script.js
 //  Course: FYBSc IT - Introduction to Programming
 //
-//  This script manages the complete client-side functionality:
-//  - LocalStorage Data Persistence
-//  - Single Page Application (SPA) Section Navigation
-//  - Form Validation & Image Processing (FileReader)
-//  - Dynamic DOM Rendering for Item Cards & Statistics
-//  - Real-time Keyword Search & Category/Status Filtering
-//  - Item Details Modal & Status Update ("Mark as Resolved")
+//  Now powered by Supabase for real multi-device synchronization.
+//  Any item submitted on one phone is instantly visible on all devices.
 //
 //  Key Concepts Used for Viva:
-//  1. Variables (let, const, var)
-//  2. Data Structures (Arrays and Objects)
-//  3. Functions and Parameter Passing
-//  4. Conditional Logic (if / else if / else)
-//  5. Iteration (for loops, forEach, filter, find)
-//  6. DOM Selection & Manipulation (getElementById, querySelector, innerHTML)
-//  7. Event Handling (addEventListener, submit, click, input, keydown)
-//  8. Web APIs (localStorage, JSON.parse/stringify, FileReader)
+//  1. Variables (let, const)
+//  2. Arrays and Objects (items array, item object)
+//  3. Functions with Parameters (addItem, loadItems, markAsResolved)
+//  4. Conditional Statements (if/else)
+//  5. Loops (forEach, for)
+//  6. DOM Manipulation (getElementById, innerHTML, classList)
+//  7. Event Listeners (addEventListener, submit, click, keydown)
+//  8. Async/Await & Promises (for database calls)
+//  9. Supabase Database (select, insert, update)
+//  10. Supabase Storage (image upload & public URL)
 // ============================================================
 
 
-// ---------- 1. CONSTANTS & INITIAL SAMPLE DATA ----------
 
-// LocalStorage key name used to store items in the user's browser
-const STORAGE_KEY = "college_lost_found_items";
-
-// Sample demonstration dataset pre-loaded when the app is first opened
-const SAMPLE_ITEMS = [
-    {
-        id: 1,
-        type: "Lost",
-        name: "Black Leather Wallet",
-        category: "Wallets/Bags",
-        description: "[Demo Sample] Black WildHorn leather wallet containing college ID card and metro smart card.",
-        date: "2026-09-23",
-        location: "College Canteen Table 4",
-        contactName: "Rahul Sharma (FYBSc IT)",
-        contactNumber: "9876543210",
-        image: "",
-        status: "Active"
-    },
-    {
-        id: 2,
-        type: "Found",
-        name: "Blue Milton Water Bottle",
-        category: "Personal",
-        description: "[Demo Sample] Stainless steel blue Milton 1-litre water bottle left on the study table.",
-        date: "2026-09-24",
-        location: "Library Reading Room (2nd Floor)",
-        contactName: "Priya Mehta (SYBSc IT)",
-        contactNumber: "9123456789",
-        image: "",
-        status: "Active"
-    },
-    {
-        id: 3,
-        type: "Lost",
-        name: "Casio Scientific Calculator",
-        category: "Electronics",
-        description: "[Demo Sample] Casio fx-991EX calculator with an IT department sticker on the back cover.",
-        date: "2026-09-22",
-        location: "Computer Lab 3 (Ground Floor)",
-        contactName: "Aman Verma (FYBSc IT)",
-        contactNumber: "9000012345",
-        image: "",
-        status: "Active"
-    },
-    {
-        id: 4,
-        type: "Found",
-        name: "Student ID Card & Lanyard",
-        category: "ID/Documents",
-        description: "[Demo Sample] First-year college identity card found near the auditorium entrance corridor.",
-        date: "2026-09-21",
-        location: "Main Auditorium Corridor",
-        contactName: "Sunita Rao (Security Office)",
-        contactNumber: "9765432108",
-        image: "",
-        status: "Resolved"
-    }
-];
-
-// Current active filter state
-let currentFilterType = "All";
-
-
-// ---------- 2. LOCALSTORAGE HELPER FUNCTIONS ----------
+// =====================================================
+//  SECTION 1: DATABASE CONNECTION & STATUS
+// =====================================================
 
 /**
- * Retrieve all items from browser localStorage.
- * If no data exists yet, initialize with the sample dataset.
- * @returns {Array} Array of item objects
+ * Show a banner at the top of the page for database or connection issues.
+ * type: 'error' shows red | 'warning' shows yellow
  */
-function getItemsFromStorage() {
-    const rawData = localStorage.getItem(STORAGE_KEY);
-    if (rawData === null) {
-        // First visit: save and return default sample data
-        saveItemsToStorage(SAMPLE_ITEMS);
-        return [...SAMPLE_ITEMS];
+function showDbBanner(message, type) {
+    const banner = document.getElementById("db-connection-banner");
+    if (!banner) return;
+    banner.className = "db-banner " + (type === "error" ? "error" : "");
+    banner.innerHTML = (type === "error" ? "⚠️ " : "ℹ️ ") + message;
+    banner.style.display = "flex";
+}
+
+function hideDbBanner() {
+    const banner = document.getElementById("db-connection-banner");
+    if (banner) banner.style.display = "none";
+}
+
+/**
+ * Check if the Supabase client is available.
+ * Returns true if connected, false if not.
+ */
+function isConnected() {
+    if (!dbClient) {
+        showDbBanner(
+            "Database not connected. Please add your Supabase credentials to config.js.",
+            "error"
+        );
+        return false;
     }
-    try {
-        return JSON.parse(rawData);
-    } catch (e) {
-        console.error("Error parsing localStorage data", e);
+    return true;
+}
+
+
+
+// =====================================================
+//  SECTION 2: DATABASE OPERATIONS
+// =====================================================
+
+/**
+ * Load all items from Supabase database (newest first).
+ * Returns an array of item objects, or an empty array if error.
+ */
+async function loadItems() {
+    if (!isConnected()) return [];
+
+    const { data, error } = await dbClient
+        .from("items")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Error loading items from Supabase:", error.message);
+        showDbBanner("Unable to load items from the database. Please try again.", "error");
         return [];
     }
+
+    hideDbBanner();
+    return data;
 }
 
 /**
- * Save the array of items to browser localStorage as a JSON string.
- * @param {Array} items - Array of item objects
+ * Insert a new item report into the Supabase database.
+ * Returns true on success, false on failure.
  */
-function saveItemsToStorage(items) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-}
+async function addItem(newItem) {
+    if (!isConnected()) return false;
 
-/**
- * Generate a new unique integer ID for an item.
- * @param {Array} items - Existing items array
- * @returns {number} Unique numeric ID
- */
-function generateUniqueId(items) {
-    if (!items || items.length === 0) return 1;
-    let maxId = 0;
-    for (let i = 0; i < items.length; i++) {
-        if (items[i].id > maxId) {
-            maxId = items[i].id;
-        }
-    }
-    return maxId + 1;
-}
+    const { error } = await dbClient
+        .from("items")
+        .insert([newItem]);
 
-/**
- * Reset localStorage to sample demo items (useful for demonstrations).
- */
-function resetToSampleData() {
-    if (confirm("Reset all items back to the initial sample demonstration data?")) {
-        saveItemsToStorage(SAMPLE_ITEMS);
-        updateStats();
-        renderItems();
-        renderRecentItems();
-        showToast("Demo data restored successfully!", "success");
-    }
-}
-
-
-// ---------- 3. NAVIGATION & VIEW SWITCHING ----------
-
-/**
- * Switch the visible section (Single Page App behavior).
- * @param {string} sectionId - 'home', 'report-lost', 'report-found', or 'items'
- */
-function showSection(sectionId) {
-    // 1. Hide all sections
-    const sections = document.querySelectorAll(".main-content .section");
-    sections.forEach(sec => sec.classList.remove("active"));
-
-    // 2. Show the target section
-    const targetSection = document.getElementById(sectionId);
-    if (targetSection) {
-        targetSection.classList.add("active");
+    if (error) {
+        console.error("Error adding item to Supabase:", error.message);
+        return false;
     }
 
-    // 3. Update active nav link
-    const navLinks = document.querySelectorAll(".nav-menu li a");
-    navLinks.forEach(link => {
-        link.classList.remove("active");
-        if (link.getAttribute("href") === "#" + sectionId) {
-            link.classList.add("active");
-        }
-    });
-
-    // 4. Close mobile menu if open
-    const navMenu = document.getElementById("nav-menu");
-    if (navMenu) {
-        navMenu.classList.remove("show");
-    }
-
-    // 5. Trigger section-specific updates
-    if (sectionId === "items") {
-        renderItems();
-    } else if (sectionId === "home") {
-        updateStats();
-        renderRecentItems();
-    }
-
-    // 6. Scroll window to top
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    return true;
 }
 
 /**
- * Helper to jump directly from stats cards to the items page with a filter applied.
- * @param {string} filterType - 'Lost', 'Found', or 'Resolved'
+ * Update an item's status to "Resolved" in the Supabase database.
+ * Returns true on success, false on failure.
  */
-function filterAndShow(filterType) {
-    setFilterType(filterType);
-    showSection("items");
-}
+async function markAsResolved(itemId) {
+    if (!isConnected()) return false;
 
-/**
- * Toggle mobile navigation hamburger menu.
- */
-function toggleMobileNav() {
-    const navMenu = document.getElementById("nav-menu");
-    if (navMenu) {
-        navMenu.classList.toggle("show");
+    const { error } = await dbClient
+        .from("items")
+        .update({ status: "Resolved" })
+        .eq("id", itemId);
+
+    if (error) {
+        console.error("Error updating item status:", error.message);
+        return false;
     }
+
+    return true;
+}
+
+/**
+ * Upload an image to Supabase Storage.
+ * Returns the public URL string, or empty string if failed or no file.
+ */
+async function uploadItemImage(fileInput) {
+    if (!isConnected()) return "";
+
+    const file = fileInput && fileInput.files && fileInput.files[0];
+    if (!file) return "";
+
+    // Generate a unique file path using timestamp
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+    const { error: uploadError } = await dbClient.storage
+        .from("item-images")
+        .upload(fileName, file, { cacheControl: "3600", upsert: false });
+
+    if (uploadError) {
+        console.error("Image upload failed:", uploadError.message);
+        return ""; // Don't block item submission on image failure
+    }
+
+    const { data } = dbClient.storage
+        .from("item-images")
+        .getPublicUrl(fileName);
+
+    return data.publicUrl || "";
 }
 
 
-// ---------- 4. STATISTICS CALCULATION ----------
+
+// =====================================================
+//  SECTION 3: STATISTICS
+// =====================================================
 
 /**
- * Compute counts for Lost, Found, and Resolved items and update the UI.
+ * Load items and update the stats counters on home page and items page.
  */
-function updateStats() {
-    const items = getItemsFromStorage();
+async function updateStats() {
+    const items = await loadItems();
 
     let lostCount = 0;
     let foundCount = 0;
     let resolvedCount = 0;
 
+    // Count each item by type and status
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
         if (item.status === "Resolved") {
@@ -234,21 +181,19 @@ function updateStats() {
         }
     }
 
-    // Update Home page statistics
+    // Update home page stats (total-lost, total-found, total-resolved)
     const totalLostEl = document.getElementById("total-lost");
     const totalFoundEl = document.getElementById("total-found");
     const totalResolvedEl = document.getElementById("total-resolved");
-
     if (totalLostEl) totalLostEl.textContent = lostCount;
     if (totalFoundEl) totalFoundEl.textContent = foundCount;
     if (totalResolvedEl) totalResolvedEl.textContent = resolvedCount;
 
-    // Update Filter Tab badge counters on Items page
+    // Update filter tab counters on items page
     const countAllEl = document.getElementById("count-all");
     const countLostEl = document.getElementById("count-lost");
     const countFoundEl = document.getElementById("count-found");
     const countResolvedEl = document.getElementById("count-resolved");
-
     if (countAllEl) countAllEl.textContent = items.length;
     if (countLostEl) countLostEl.textContent = lostCount;
     if (countFoundEl) countFoundEl.textContent = foundCount;
@@ -256,12 +201,77 @@ function updateStats() {
 }
 
 
-// ---------- 5. IMAGE UPLOAD & PREVIEW (FileReader API) ----------
+
+// =====================================================
+//  SECTION 4: NAVIGATION (SPA SECTION SWITCHING)
+// =====================================================
 
 /**
- * Read and preview the selected image file before submission.
- * @param {HTMLInputElement} input - File input element
- * @param {string} previewContainerId - ID of preview container div
+ * Show a specific section and hide all others.
+ * sectionId: 'home', 'report-lost', 'report-found', or 'items'
+ */
+async function showSection(sectionId) {
+    // Hide all sections
+    const sections = document.querySelectorAll(".main-content .section");
+    sections.forEach(function(sec) {
+        sec.classList.remove("active");
+    });
+
+    // Show the chosen section
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+        targetSection.classList.add("active");
+    }
+
+    // Highlight correct nav link
+    const navLinks = document.querySelectorAll(".nav-menu li a");
+    navLinks.forEach(function(link) {
+        link.classList.remove("active");
+        if (link.getAttribute("href") === "#" + sectionId) {
+            link.classList.add("active");
+        }
+    });
+
+    // Close mobile menu
+    const navMenu = document.getElementById("nav-menu");
+    if (navMenu) navMenu.classList.remove("show");
+
+    // Reload data when entering items or home section
+    if (sectionId === "items") {
+        await renderItems();
+    } else if (sectionId === "home") {
+        await updateStats();
+        await renderRecentItems();
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/**
+ * Jump to items page with a specific filter applied.
+ */
+async function filterAndShow(filterType) {
+    setFilterType(filterType);
+    await showSection("items");
+}
+
+/**
+ * Open/close mobile hamburger menu.
+ */
+function toggleMobileNav() {
+    const navMenu = document.getElementById("nav-menu");
+    if (navMenu) navMenu.classList.toggle("show");
+}
+
+
+
+// =====================================================
+//  SECTION 5: IMAGE PREVIEW (CLIENT-SIDE)
+// =====================================================
+
+/**
+ * Immediately preview the chosen photo in the form.
+ * This is shown in the browser before the image is uploaded to Supabase.
  */
 function previewImage(input, previewContainerId) {
     const container = document.getElementById(previewContainerId);
@@ -274,79 +284,54 @@ function previewImage(input, previewContainerId) {
         return;
     }
 
-    // Validate image file size (limit to ~1MB to keep localStorage lightweight)
-    if (file.size > 1048576) {
-        alert("Image size exceeds 1MB. Please select a smaller photo.");
-        input.value = ""; // Clear file selection
+    // Limit to 5MB (Supabase Storage can handle it; Base64 in DB was limited to 1MB)
+    if (file.size > 5242880) {
+        alert("Image size exceeds 5MB. Please select a smaller photo.");
+        input.value = "";
         container.innerHTML = "";
         container.style.display = "none";
         return;
     }
 
-    // Use FileReader to convert file into base64 Data URL
+    // Show local preview using FileReader (this is just for UI — actual upload happens on submit)
     const reader = new FileReader();
     reader.onload = function(e) {
         container.innerHTML = `
             <img src="${e.target.result}" alt="Photo Preview">
-            <p style="font-size:0.75rem; color:#64748b; margin-top:4px;">Photo selected (${Math.round(file.size / 1024)} KB)</p>
+            <p style="font-size:0.75rem; color:#64748b; margin-top:4px;">Photo selected (${Math.round(file.size / 1024)} KB) — will upload on submit</p>
         `;
         container.style.display = "block";
     };
     reader.readAsDataURL(file);
 }
 
-/**
- * Helper to read a file input as Base64 string asynchronously.
- * @param {HTMLInputElement} fileInput - Form file input element
- * @returns {Promise<string>} Base64 string or empty string
- */
-function readFileAsBase64(fileInput) {
-    return new Promise((resolve) => {
-        const file = fileInput.files && fileInput.files[0];
-        if (!file) {
-            resolve("");
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            resolve(e.target.result);
-        };
-        reader.onerror = function() {
-            resolve("");
-        };
-        reader.readAsDataURL(file);
-    });
-}
 
 
-// ---------- 6. FORM SUBMISSION & VALIDATION ----------
+// =====================================================
+//  SECTION 6: FORM ALERTS & VALIDATION
+// =====================================================
 
 /**
- * Display a temporary alert message inside a form container.
- * @param {string} formAlertId - Container element ID
- * @param {string} message - Message text
- * @param {string} type - 'error' or 'success'
+ * Show a success or error alert inside a form.
  */
 function showFormAlert(formAlertId, message, type) {
     const alertBox = document.getElementById(formAlertId);
     if (!alertBox) return;
 
     alertBox.innerHTML = `
-        <div class="form-alert ${type === 'success' ? 'form-alert-success' : 'form-alert-error'}">
-            ${type === 'success' ? '✓ ' : '⚠️ '}${escapeHtml(message)}
+        <div class="form-alert ${type === "success" ? "form-alert-success" : "form-alert-error"}">
+            ${type === "success" ? "✓ " : "⚠️ "}${escapeHtml(message)}
         </div>
     `;
 
-    setTimeout(() => {
+    setTimeout(function() {
         if (alertBox) alertBox.innerHTML = "";
-    }, 4000);
+    }, 5000);
 }
 
 /**
- * Validate form inputs.
- * @param {Object} data - Form data object
- * @returns {string|null} Error message or null if valid
+ * Validate all required form fields.
+ * Returns an error message string if invalid, null if all valid.
  */
 function validateFormData(data) {
     if (!data.name || data.name.trim() === "") {
@@ -356,31 +341,36 @@ function validateFormData(data) {
         return "Please select a category.";
     }
     if (!data.date || data.date === "") {
-        return "Please select a valid date.";
+        return "Please select a date.";
     }
     if (!data.location || data.location.trim() === "") {
         return "Please specify the location.";
     }
     if (!data.description || data.description.trim() === "") {
-        return "Please provide a short description.";
+        return "Please provide a description.";
     }
-    if (!data.contactName || data.contactName.trim() === "") {
+    if (!data.contact_name || data.contact_name.trim() === "") {
         return "Please enter your name.";
     }
 
-    // Contact number validation: must be 10 digits
-    const phoneClean = data.contactNumber.replace(/\D/g, "");
-    if (phoneClean.length !== 10) {
+    // Validate 10-digit phone number
+    const phoneDigits = data.contact_number.replace(/\D/g, "");
+    if (phoneDigits.length !== 10) {
         return "Please enter a valid 10-digit mobile number (e.g. 9876543210).";
     }
 
-    return null; // Valid
+    return null; // All valid
 }
 
+
+
+// =====================================================
+//  SECTION 7: FORM SUBMISSION
+// =====================================================
+
 /**
- * Handle form submission for Lost or Found reports.
- * @param {Event} event - Submit event
- * @param {string} formId - 'lost-form' or 'found-form'
+ * Handle form submission for Lost or Found item reports.
+ * Validates the form, optionally uploads an image, and inserts into Supabase.
  */
 async function handleFormSubmit(event, formId) {
     event.preventDefault();
@@ -391,57 +381,76 @@ async function handleFormSubmit(event, formId) {
     const alertId = formId === "lost-form" ? "lost-form-alert" : "found-form-alert";
     const previewContainerId = formId === "lost-form" ? "lost-preview-container" : "found-preview-container";
 
-    // Extract form values
-    const type = form.elements["type"].value;
+    // Get form field values
+    const type = form.elements["type"].value;          // "Lost" or "Found"
     const name = form.elements["name"].value.trim();
     const category = form.elements["category"].value;
     const date = form.elements["date"].value;
     const location = form.elements["location"].value.trim();
     const description = form.elements["description"].value.trim();
-    const contactName = form.elements["contactName"].value.trim();
-    const contactNumber = form.elements["contactNumber"].value.trim();
+    const contact_name = form.elements["contactName"].value.trim();
+    const contact_number = form.elements["contactNumber"].value.trim();
     const imageInput = form.elements["image"];
 
-    // Validation
+    // Run validation
     const validationError = validateFormData({
-        name, category, date, location, description, contactName, contactNumber
+        name, category, date, location, description, contact_name, contact_number
     });
-
     if (validationError) {
         showFormAlert(alertId, validationError, "error");
         return;
     }
 
-    // Read image if selected
-    const imageBase64 = await readFileAsBase64(imageInput);
+    // Disable submit button and show loading state
+    const submitBtn = form.querySelector("button[type='submit']");
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Submitting...";
+    }
 
-    // Fetch existing items and create new record
-    const items = getItemsFromStorage();
+    // Upload image to Supabase Storage if the user attached one
+    let image_url = "";
+    if (imageInput && imageInput.files && imageInput.files[0]) {
+        showFormAlert(alertId, "Uploading photo...", "success");
+        image_url = await uploadItemImage(imageInput);
+        if (!image_url) {
+            console.warn("Image upload failed. Continuing without image.");
+        }
+    }
+
+    // Build the item object matching the Supabase column names
     const newItem = {
-        id: generateUniqueId(items),
-        type: type, // "Lost" or "Found"
+        type: type,
         name: name,
         category: category,
         description: description,
         date: date,
         location: location,
-        contactName: contactName,
-        contactNumber: contactNumber,
-        image: imageBase64,
+        contact_name: contact_name,
+        contact_number: contact_number,
+        image_url: image_url,
         status: "Active"
     };
 
-    // Prepend new item to the beginning of the list
-    items.unshift(newItem);
+    // Insert item into Supabase
+    const success = await addItem(newItem);
 
-    // Save to localStorage
-    saveItemsToStorage(items);
+    // Re-enable submit button
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = formId === "lost-form" ? "Submit Lost Report" : "Submit Found Report";
+    }
 
-    // Show success feedback
-    showFormAlert(alertId, `${type} item report submitted successfully!`, "success");
-    showToast(`Your ${type.toLowerCase()} item report has been published.`, "success");
+    if (!success) {
+        showFormAlert(alertId, "Could not submit the item. Please check your connection and try again.", "error");
+        return;
+    }
 
-    // Reset the form and preview box
+    // Show success message
+    showFormAlert(alertId, `${type} item report submitted successfully! It is now visible to all devices.`, "success");
+    showToast(`Your ${type.toLowerCase()} item has been posted and is now live!`, "success");
+
+    // Reset form and preview
     form.reset();
     const previewBox = document.getElementById(previewContainerId);
     if (previewBox) {
@@ -449,45 +458,45 @@ async function handleFormSubmit(event, formId) {
         previewBox.style.display = "none";
     }
 
-    // Refresh stats
-    updateStats();
-
-    // After 1.2 seconds, smoothly navigate to the items gallery to see the new post
-    setTimeout(() => {
-        showSection("items");
-    }, 1200);
+    // Refresh stats and then head to gallery after short delay
+    await updateStats();
+    setTimeout(async function() {
+        await showSection("items");
+    }, 1300);
 }
 
 
-// ---------- 7. RENDERING ITEMS (GALLERY & HOME PREVIEW) ----------
+
+// =====================================================
+//  SECTION 8: RENDERING ITEMS (GALLERY & HOME PREVIEW)
+// =====================================================
+
+// Current active filter (Lost, Found, Resolved, All)
+let currentFilterType = "All";
 
 /**
- * Get category icon/emoji helper.
- * @param {string} category
- * @returns {string} Emoji icon
+ * Return the emoji for a given category.
  */
 function getCategoryIcon(category) {
     switch (category) {
-        case "Electronics": return "💻";
-        case "ID/Documents": return "🪪";
-        case "Wallets/Bags": return "👛";
-        case "Stationery/Books": return "📚";
-        case "Personal": return "🔑";
-        case "Clothing": return "👕";
-        default: return "📦";
+        case "Electronics":       return "💻";
+        case "ID/Documents":      return "🪪";
+        case "Wallets/Bags":      return "👛";
+        case "Stationery/Books":  return "📚";
+        case "Personal":          return "🔑";
+        case "Clothing":          return "👕";
+        default:                  return "📦";
     }
 }
 
 /**
- * Build an individual item card DOM element.
- * @param {Object} item - Item object
- * @returns {HTMLElement} Card element
+ * Build an item card HTML element.
  */
 function createItemCardElement(item) {
     const card = document.createElement("div");
-    card.className = `item-card ${item.status === "Resolved" ? "is-resolved" : ""}`;
+    card.className = "item-card " + (item.status === "Resolved" ? "is-resolved" : "");
 
-    // Status / Type badge setup
+    // Set badge based on type and status
     let badgeClass = "badge-lost";
     let badgeLabel = "Lost Item";
     let badgeIcon = "🔴";
@@ -502,19 +511,19 @@ function createItemCardElement(item) {
         badgeIcon = "🟢";
     }
 
-    // Media: image or clean placeholder
+    // Media: show image if available, else category icon
     let mediaHtml = "";
-    if (item.image && item.image.trim() !== "") {
-        mediaHtml = `<img src="${item.image}" alt="${escapeHtml(item.name)}">`;
+    if (item.image_url && item.image_url.trim() !== "") {
+        mediaHtml = `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">`;
     } else {
         mediaHtml = `<span class="card-placeholder-icon">${getCategoryIcon(item.category)}</span>`;
     }
 
-    // Resolve button HTML (only if not already resolved)
+    // Resolve button (only for active items)
     let resolveBtnHtml = "";
     if (item.status !== "Resolved") {
         resolveBtnHtml = `
-            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); markItemAsResolved(${item.id})">
+            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); handleMarkAsResolved(${item.id})">
                 ✓ Resolve
             </button>
         `;
@@ -536,7 +545,7 @@ function createItemCardElement(item) {
             <ul class="card-meta-list">
                 <li><span>📍</span> <strong>Location:</strong> ${escapeHtml(item.location)}</li>
                 <li><span>📅</span> <strong>Date:</strong> ${formatDate(item.date)}</li>
-                <li><span>👤</span> <strong>Contact:</strong> ${escapeHtml(item.contactName)}</li>
+                <li><span>👤</span> <strong>Contact:</strong> ${escapeHtml(item.contact_name)}</li>
             </ul>
             <div class="card-actions">
                 <button class="btn btn-outline btn-sm" onclick="openModal(${item.id})">
@@ -551,101 +560,124 @@ function createItemCardElement(item) {
 }
 
 /**
- * Render items in the main gallery based on search, status tab, and category filter.
+ * Render the entire items gallery with filtering and search applied.
+ * Fetches real data from Supabase every time.
  */
-function renderItems() {
-    const items = getItemsFromStorage();
+async function renderItems() {
+    const grid = document.getElementById("items-grid");
+    if (!grid) return;
+
+    // Show loading indicator
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⏳</div><p>Loading items from database...</p></div>`;
+
+    const items = await loadItems();
+
     const searchInput = document.getElementById("search");
     const categorySelect = document.getElementById("filter-category");
-    const grid = document.getElementById("items-grid");
     const resultsSummary = document.getElementById("results-count-text");
     const clearSearchBtn = document.getElementById("clear-search");
     const resetFiltersBtn = document.getElementById("reset-all-filters");
 
-    if (!grid) return;
-
     const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
     const selectedCategory = categorySelect ? categorySelect.value : "All";
 
-    // Show or hide clear button inside search box
     if (clearSearchBtn) {
         clearSearchBtn.style.display = query.length > 0 ? "block" : "none";
     }
 
-    // Filter items
-    const filteredItems = items.filter(item => {
-        // 1. Search Query match (searches name, location, and description)
+    // Filter items based on search query, status tab, and category dropdown
+    const filteredItems = items.filter(function(item) {
+        // 1. Search query check
         const matchesSearch = query === "" ||
             item.name.toLowerCase().includes(query) ||
             item.location.toLowerCase().includes(query) ||
             item.description.toLowerCase().includes(query) ||
             item.category.toLowerCase().includes(query);
 
-        // 2. Status / Type Filter tab match
+        // 2. Status / Type tab check
         let matchesType = false;
         if (currentFilterType === "All") {
             matchesType = true;
         } else if (currentFilterType === "Resolved") {
             matchesType = (item.status === "Resolved");
         } else {
-            // Lost or Found active items
             matchesType = (item.type === currentFilterType && item.status !== "Resolved");
         }
 
-        // 3. Category Dropdown match
-        let matchesCategory = false;
-        if (selectedCategory === "All" || item.category === selectedCategory) {
-            matchesCategory = true;
-        }
+        // 3. Category dropdown check
+        const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
 
         return matchesSearch && matchesType && matchesCategory;
     });
 
-    // Clear grid
-    grid.innerHTML = "";
-
-    // Show summary text
+    // Update summary text
     if (resultsSummary) {
         const filterName = currentFilterType === "All" ? "Total" : currentFilterType;
         resultsSummary.textContent = `Showing ${filteredItems.length} of ${items.length} items (${filterName})`;
     }
 
-    // Show reset button if any filter is active
+    // Show/hide reset button
     if (resetFiltersBtn) {
         const isFiltered = query !== "" || currentFilterType !== "All" || selectedCategory !== "All";
         resetFiltersBtn.style.display = isFiltered ? "inline-block" : "none";
     }
 
-    // If empty
+    // Update tab counts
+    updateTabCounts(items);
+
+    // Clear and render the grid
+    grid.innerHTML = "";
+
     if (filteredItems.length === 0) {
         grid.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">🔎</div>
-                <h3>No Matching Items Found</h3>
-                <p>We couldn't find any lost or found items matching your current search and filter criteria.</p>
+                <h3>No items found</h3>
+                <p>No lost or found items reported yet, or try adjusting your search filters.</p>
                 <button class="btn btn-secondary btn-sm" onclick="resetFilters()">Clear Filters</button>
             </div>
         `;
         return;
     }
 
-    // Append cards
-    filteredItems.forEach(item => {
+    // Render each item card
+    filteredItems.forEach(function(item) {
         grid.appendChild(createItemCardElement(item));
     });
+}
 
-    // Keep statistics numbers in sync
-    updateStats();
+/**
+ * Update filter tab counts based on full items list.
+ */
+function updateTabCounts(items) {
+    let lostCount = 0, foundCount = 0, resolvedCount = 0;
+    items.forEach(function(item) {
+        if (item.status === "Resolved") resolvedCount++;
+        else if (item.type === "Lost") lostCount++;
+        else if (item.type === "Found") foundCount++;
+    });
+
+    const countAllEl = document.getElementById("count-all");
+    const countLostEl = document.getElementById("count-lost");
+    const countFoundEl = document.getElementById("count-found");
+    const countResolvedEl = document.getElementById("count-resolved");
+
+    if (countAllEl) countAllEl.textContent = items.length;
+    if (countLostEl) countLostEl.textContent = lostCount;
+    if (countFoundEl) countFoundEl.textContent = foundCount;
+    if (countResolvedEl) countResolvedEl.textContent = resolvedCount;
 }
 
 /**
  * Render the 3 most recent items on the Home Page preview section.
  */
-function renderRecentItems() {
+async function renderRecentItems() {
     const recentGrid = document.getElementById("recent-items-grid");
     if (!recentGrid) return;
 
-    const items = getItemsFromStorage();
+    recentGrid.innerHTML = `<div class="empty-state"><p>Loading recent reports...</p></div>`;
+
+    const items = await loadItems();
     recentGrid.innerHTML = "";
 
     if (items.length === 0) {
@@ -657,27 +689,27 @@ function renderRecentItems() {
         return;
     }
 
-    // Take the first 3 items
-    const recentList = items.slice(0, 3);
-    recentList.forEach(item => {
+    // Show the 3 most recent items
+    items.slice(0, 3).forEach(function(item) {
         recentGrid.appendChild(createItemCardElement(item));
     });
 }
 
 
-// ---------- 8. FILTER & SEARCH CONTROL HELPERS ----------
+
+// =====================================================
+//  SECTION 9: FILTER & SEARCH HELPERS
+// =====================================================
 
 /**
- * Set the current status tab filter ('All', 'Lost', 'Found', 'Resolved').
- * @param {string} filterType
+ * Set the status tab filter and re-render the gallery.
  */
 function setFilterType(filterType) {
     currentFilterType = filterType;
 
-    // Update tab button classes
     const tabs = ["All", "Lost", "Found", "Resolved"];
-    tabs.forEach(tab => {
-        const btn = document.getElementById(`tab-${tab}`);
+    tabs.forEach(function(tab) {
+        const btn = document.getElementById("tab-" + tab);
         if (btn) {
             if (tab === filterType) {
                 btn.classList.add("active");
@@ -691,7 +723,7 @@ function setFilterType(filterType) {
 }
 
 /**
- * Clear the search box input and refresh results.
+ * Clear the search box and re-render.
  */
 function clearSearch() {
     const searchInput = document.getElementById("search");
@@ -703,55 +735,57 @@ function clearSearch() {
 }
 
 /**
- * Reset all filters (search, tab, category dropdown) back to default.
+ * Reset all filters and search to their defaults.
  */
 function resetFilters() {
     const searchInput = document.getElementById("search");
     const categorySelect = document.getElementById("filter-category");
-
     if (searchInput) searchInput.value = "";
     if (categorySelect) categorySelect.value = "All";
-
     setFilterType("All");
 }
 
 
-// ---------- 9. ITEM DETAILS MODAL & RESOLVE ACTION ----------
+
+// =====================================================
+//  SECTION 10: ITEM DETAILS MODAL
+// =====================================================
+
+// Store all currently loaded items so modal can find by ID
+let _cachedItems = [];
 
 /**
- * Open the detailed view modal for a given item ID.
- * @param {number} itemId - ID of the item
+ * Open the item details modal popup for a given item ID.
  */
-function openModal(itemId) {
-    const items = getItemsFromStorage();
-    const item = items.find(i => i.id === itemId);
+async function openModal(itemId) {
+    // Load or re-use the last fetched items
+    if (_cachedItems.length === 0) {
+        _cachedItems = await loadItems();
+    }
 
+    const item = _cachedItems.find(function(i) { return i.id === itemId; });
     if (!item) return;
 
     const modalBody = document.getElementById("modal-body");
     const modal = document.getElementById("item-modal");
-
     if (!modalBody || !modal) return;
 
-    // Badges setup
     let typeBadgeClass = item.type === "Lost" ? "badge-lost" : "badge-found";
     let statusBadgeClass = item.status === "Resolved" ? "badge-resolved" : "badge-found";
 
-    // Media HTML
     let mediaHtml = "";
-    if (item.image && item.image.trim() !== "") {
+    if (item.image_url && item.image_url.trim() !== "") {
         mediaHtml = `
             <div class="modal-media">
-                <img src="${item.image}" alt="${escapeHtml(item.name)}">
+                <img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">
             </div>
         `;
     }
 
-    // Resolve Button
     let resolveButtonHtml = "";
     if (item.status !== "Resolved") {
         resolveButtonHtml = `
-            <button class="btn btn-success" onclick="markItemAsResolved(${item.id})">
+            <button class="btn btn-success" onclick="handleMarkAsResolved(${item.id})">
                 ✓ Mark as Resolved / Returned
             </button>
         `;
@@ -798,11 +832,11 @@ function openModal(itemId) {
                 </tr>
                 <tr>
                     <th>Contact Person</th>
-                    <td>👤 ${escapeHtml(item.contactName)}</td>
+                    <td>👤 ${escapeHtml(item.contact_name)}</td>
                 </tr>
                 <tr>
                     <th>Contact Number</th>
-                    <td>📞 <a href="tel:${escapeHtml(item.contactNumber)}" style="color:var(--primary-light);font-weight:700;">${escapeHtml(item.contactNumber)}</a></td>
+                    <td>📞 <a href="tel:${escapeHtml(item.contact_number)}" style="color:var(--primary-light);font-weight:700;">${escapeHtml(item.contact_number)}</a></td>
                 </tr>
                 <tr>
                     <th>Current Status</th>
@@ -813,7 +847,7 @@ function openModal(itemId) {
 
         <div class="modal-actions">
             ${resolveButtonHtml}
-            <a href="tel:${escapeHtml(item.contactNumber)}" class="btn btn-primary">
+            <a href="tel:${escapeHtml(item.contact_number)}" class="btn btn-primary">
                 📞 Call Contact
             </a>
             <button class="btn btn-secondary" onclick="closeModal()">
@@ -823,11 +857,11 @@ function openModal(itemId) {
     `;
 
     modal.style.display = "flex";
-    document.body.style.overflow = "hidden"; // Prevent background scrolling
+    document.body.style.overflow = "hidden";
 }
 
 /**
- * Close the item details modal.
+ * Close the modal popup.
  */
 function closeModal() {
     const modal = document.getElementById("item-modal");
@@ -838,62 +872,61 @@ function closeModal() {
 }
 
 /**
- * Change the status of an item to 'Resolved'.
- * @param {number} itemId - ID of item to resolve
+ * Handle the "Mark as Resolved" button click.
+ * Updates Supabase and refreshes the page.
  */
-function markItemAsResolved(itemId) {
+async function handleMarkAsResolved(itemId) {
     if (!confirm("Are you sure you want to mark this item as Resolved / Handed Over?")) {
         return;
     }
 
-    const items = getItemsFromStorage();
-    let found = false;
+    const success = await markAsResolved(itemId);
 
-    for (let i = 0; i < items.length; i++) {
-        if (items[i].id === itemId) {
-            items[i].status = "Resolved";
-            found = true;
-            break;
-        }
+    if (!success) {
+        showToast("Could not update item status. Please try again.", "error");
+        return;
     }
 
-    if (found) {
-        saveItemsToStorage(items);
-        updateStats();
-        renderItems();
-        renderRecentItems();
-        closeModal();
-        showToast("Item status updated to Resolved! ✓", "success");
-    }
+    // Clear cached items to force a fresh fetch
+    _cachedItems = [];
+
+    showToast("Item marked as Resolved! ✓", "success");
+    closeModal();
+
+    await updateStats();
+    await renderItems();
+    await renderRecentItems();
 }
 
 
-// ---------- 10. TOAST NOTIFICATIONS ----------
+
+// =====================================================
+//  SECTION 11: TOAST NOTIFICATIONS
+// =====================================================
 
 /**
- * Display a floating toast notification.
- * @param {string} message - Message text
- * @param {string} type - 'success' or 'info'
+ * Show a floating notification at the bottom of the page.
  */
-function showToast(message, type = "info") {
+function showToast(message, type) {
     const toast = document.getElementById("toast");
     if (!toast) return;
 
-    toast.innerHTML = `${type === "success" ? "✓" : "ℹ"} ${escapeHtml(message)}`;
+    toast.innerHTML = (type === "success" ? "✓ " : "ℹ ") + escapeHtml(message);
     toast.classList.add("show");
 
-    setTimeout(() => {
+    setTimeout(function() {
         toast.classList.remove("show");
     }, 3500);
 }
 
 
-// ---------- 11. STRING & DATE UTILITY FUNCTIONS ----------
+
+// =====================================================
+//  SECTION 12: UTILITY FUNCTIONS
+// =====================================================
 
 /**
- * Escape HTML special characters to prevent XSS injection.
- * @param {string} str - Raw text string
- * @returns {string} Sanitized string
+ * Prevent XSS: convert unsafe characters in strings before inserting into HTML.
  */
 function escapeHtml(str) {
     if (!str) return "";
@@ -903,13 +936,11 @@ function escapeHtml(str) {
 }
 
 /**
- * Format ISO date (YYYY-MM-DD) into readable format (e.g., 23 Sep 2026).
- * @param {string} dateStr - 'YYYY-MM-DD'
- * @returns {string} Formatted date
+ * Format a database date string (YYYY-MM-DD) into a readable format (e.g. 26 Sep 2026).
  */
 function formatDate(dateStr) {
     if (!dateStr) return "N/A";
-    const parts = dateStr.split("-");
+    const parts = String(dateStr).substring(0, 10).split("-");
     if (parts.length !== 3) return dateStr;
 
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -924,44 +955,49 @@ function formatDate(dateStr) {
 }
 
 
-// ---------- 12. INITIALIZATION & EVENT LISTENERS ----------
 
-document.addEventListener("DOMContentLoaded", function() {
+// =====================================================
+//  SECTION 13: APP INITIALIZATION
+// =====================================================
 
-    // 1. Set max date on date inputs to today's date so users can't pick future dates
+document.addEventListener("DOMContentLoaded", async function() {
+
+    // Set max date on date fields to today
     const todayStr = new Date().toISOString().split("T")[0];
     const lostDateInput = document.getElementById("lost-date");
     const foundDateInput = document.getElementById("found-date");
     if (lostDateInput) lostDateInput.setAttribute("max", todayStr);
     if (foundDateInput) foundDateInput.setAttribute("max", todayStr);
 
-    // 2. Attach Form Submission Event Listeners
+    // Attach form submission handlers
     const lostForm = document.getElementById("lost-form");
     if (lostForm) {
-        lostForm.addEventListener("submit", (e) => handleFormSubmit(e, "lost-form"));
+        lostForm.addEventListener("submit", function(e) {
+            handleFormSubmit(e, "lost-form");
+        });
     }
 
     const foundForm = document.getElementById("found-form");
     if (foundForm) {
-        foundForm.addEventListener("submit", (e) => handleFormSubmit(e, "found-form"));
+        foundForm.addEventListener("submit", function(e) {
+            handleFormSubmit(e, "found-form");
+        });
     }
 
-    // 3. Close modal when pressing the Escape key
+    // Close modal on Escape key
     document.addEventListener("keydown", function(e) {
-        if (e.key === "Escape") {
-            closeModal();
-        }
+        if (e.key === "Escape") closeModal();
     });
 
-    // 4. Handle initial URL Hash Navigation (e.g. #items, #report-lost)
+    // Read URL hash and navigate to correct section on load
     const hash = window.location.hash.replace("#", "");
     if (["home", "report-lost", "report-found", "items"].includes(hash)) {
-        showSection(hash);
+        await showSection(hash);
     } else {
-        showSection("home");
+        await showSection("home");
     }
 
-    // 5. Initial Data Loading & UI Render
-    updateStats();
-    renderRecentItems();
+    // Initial statistics load
+    await updateStats();
+    await renderRecentItems();
 });
