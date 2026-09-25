@@ -1,0 +1,470 @@
+/* ==========================================
+   Campus Lost & Found Portal — style.css
+   A clean, student-friendly design using
+   simple CSS. Blue/navy accent, light bg,
+   cards and rounded corners.
+   ========================================== */
+
+/* ---------- Reset & Base ---------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+    background: #f5f7fa;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* ---------- Navigation Bar ---------- */
+nav {
+    background: #1a3b5c;
+    color: #fff;
+    padding: 14px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+nav .logo {
+    font-size: 1.3rem;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+nav ul li a {
+    color: #dce6f0;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    transition: background 0.2s;
+    font-size: 0.95rem;
+}
+
+nav ul li a:hover,
+nav ul li a.active {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+}
+
+/* ---------- Main Layout ---------- */
+main {
+    max-width: 960px;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+section {
+    display: none;
+}
+
+section.active {
+    display: block;
+}
+
+/* ---------- Home Page ---------- */
+#home h1 {
+    font-size: 2rem;
+    color: #1a3b5c;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+#home > p {
+    text-align: center;
+    color: #555;
+    margin-bottom: 30px;
+    font-size: 1.05rem;
+}
+
+/* Statistics Cards */
+.stats-container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: #fff;
+    border: 1px solid #e0e6ee;
+    border-radius: 10px;
+    padding: 20px 30px;
+    text-align: center;
+    min-width: 160px;
+    flex: 1;
+    max-width: 220px;
+}
+
+.stat-card h3 {
+    color: #1a3b5c;
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.stat-card p {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #2a6db5;
+}
+
+/* Hero Buttons */
+.hero-actions {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.hero-actions button {
+    background: #1a3b5c;
+    color: #fff;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.hero-actions button:hover {
+    background: #2a6db5;
+}
+
+/* ---------- Forms ---------- */
+form {
+    background: #fff;
+    border: 1px solid #e0e6ee;
+    border-radius: 10px;
+    padding: 28px;
+    max-width: 520px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+form h2 {
+    text-align: center;
+}
+
+form input[type="text"],
+form input[type="tel"],
+form input[type="date"],
+form select,
+form textarea {
+    padding: 10px 14px;
+    border: 1px solid #ccd4de;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    width: 100%;
+    font-family: inherit;
+}
+
+form textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+form input[type="file"] {
+    padding: 8px 0;
+    font-size: 0.9rem;
+}
+
+form button[type="submit"] {
+    background: #1a3b5c;
+    color: #fff;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+form button[type="submit"]:hover {
+    background: #2a6db5;
+}
+
+/* Form validation - error styling */
+form input:invalid:not(:placeholder-shown),
+form textarea:invalid:not(:placeholder-shown) {
+    border-color: #d9534f;
+}
+
+/* ---------- Section Headings ---------- */
+h2 {
+    color: #1a3b5c;
+    margin-bottom: 18px;
+    text-align: center;
+    font-size: 1.5rem;
+}
+
+/* ---------- Filters & Search ---------- */
+.filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.filters input[type="text"] {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #ccd4de;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    min-width: 200px;
+}
+
+.filters select {
+    padding: 10px 14px;
+    border: 1px solid #ccd4de;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background: #fff;
+}
+
+/* ---------- Items Grid ---------- */
+.items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 18px;
+}
+
+/* ---------- Individual Item Card ---------- */
+.item-card {
+    background: #fff;
+    border: 1px solid #e0e6ee;
+    border-radius: 10px;
+    padding: 18px;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.item-card:hover {
+    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+}
+
+.item-card .badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #fff;
+    width: fit-content;
+}
+
+.badge-lost {
+    background: #d9534f;
+}
+
+.badge-found {
+    background: #5cb85c;
+}
+
+.badge-resolved {
+    background: #777;
+}
+
+.item-card h3 {
+    font-size: 1.1rem;
+    color: #1a3b5c;
+    margin: 0;
+}
+
+.item-card .card-category {
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.item-card .card-desc {
+    font-size: 0.9rem;
+    color: #555;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.item-card .card-meta {
+    font-size: 0.82rem;
+    color: #999;
+    margin-top: auto;
+}
+
+.item-card img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 4px;
+}
+
+/* Empty state */
+.no-items {
+    text-align: center;
+    color: #999;
+    padding: 40px 0;
+    font-size: 1rem;
+}
+
+/* ---------- Modal ---------- */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.45);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: #fff;
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 520px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.close-modal {
+    position: absolute;
+    top: 12px;
+    right: 18px;
+    font-size: 1.6rem;
+    color: #999;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close-modal:hover {
+    color: #333;
+}
+
+/* Modal content styling */
+#modal-body h2 {
+    margin-bottom: 12px;
+}
+
+#modal-body img {
+    width: 100%;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    max-height: 250px;
+    object-fit: cover;
+}
+
+#modal-body .detail-row {
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+}
+
+#modal-body .detail-row strong {
+    color: #1a3b5c;
+}
+
+#modal-body .resolve-btn {
+    background: #5cb85c;
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    margin-top: 14px;
+    transition: background 0.2s;
+}
+
+#modal-body .resolve-btn:hover {
+    background: #4a9a4a;
+}
+
+#modal-body .resolve-btn.resolved {
+    background: #777;
+    cursor: default;
+}
+
+/* ---------- Success / Error Messages ---------- */
+.msg-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    padding: 12px 18px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.msg-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    padding: 12px 18px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 600px) {
+    nav {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+
+    nav ul {
+        justify-content: center;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .hero-actions button {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .stats-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .stat-card {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .items-grid {
+        grid-template-columns: 1fr;
+    }
+}

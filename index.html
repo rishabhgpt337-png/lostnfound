@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Lost & Found Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Simple icon support via unicode characters or basic CSS -->
+</head>
+<body>
+    <nav>
+        <div class="logo">Campus Lost & Found</div>
+        <ul>
+            <li><a href="#home" onclick="showSection('home')">Home</a></li>
+            <li><a href="#report-lost" onclick="showSection('report-lost')">Report Lost</a></li>
+            <li><a href="#report-found" onclick="showSection('report-found')">Report Found</a></li>
+            <li><a href="#items" onclick="showSection('items')">View Items</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section id="home" class="active">
+            <h1>Welcome to Campus Lost & Found</h1>
+            <p>Help your fellow students find their lost belongings or report found items easily.</p>
+
+            <div class="stats-container">
+                <div class="stat-card"><h3>Lost Items</h3><p id="total-lost">0</p></div>
+                <div class="stat-card"><h3>Found Items</h3><p id="total-found">0</p></div>
+                <div class="stat-card"><h3>Resolved</h3><p id="total-resolved">0</p></div>
+            </div>
+
+            <div class="hero-actions">
+                <button onclick="showSection('report-lost')">Report Lost Item</button>
+                <button onclick="showSection('report-found')">Report Found Item</button>
+                <button onclick="showSection('items')">View All Items</button>
+            </div>
+        </section>
+
+        <section id="report-lost">
+            <h2>Report Lost Item</h2>
+            <form id="lost-form">
+                <input type="hidden" name="type" value="Lost">
+                <input type="text" name="name" placeholder="Item Name" required>
+                <select name="category" required>
+                    <option value="">Select Category</option>
+                    <option value="Electronics">Electronics</option>
+                    <option value="ID/Documents">ID/Documents</option>
+                    <option value="Wallets/Bags">Wallets/Bags</option>
+                    <option value="Personal">Personal</option>
+                    <option value="Other">Other</option>
+                </select>
+                <textarea name="description" placeholder="Short description" required></textarea>
+                <input type="date" name="date" required>
+                <input type="text" name="location" placeholder="Where did you lose it?" required>
+                <input type="text" name="contactName" placeholder="Your Name" required>
+                <input type="tel" name="contactNumber" placeholder="Contact Number (10 digits)" pattern="[0-9]{10}" required>
+                <input type="file" name="image" accept="image/*">
+                <button type="submit">Submit Lost Report</button>
+            </form>
+        </section>
+
+        <section id="report-found">
+            <h2>Report Found Item</h2>
+            <form id="found-form">
+                <input type="hidden" name="type" value="Found">
+                <input type="text" name="name" placeholder="Item Name" required>
+                <select name="category" required>
+                    <option value="">Select Category</option>
+                    <option value="Electronics">Electronics</option>
+                    <option value="ID/Documents">ID/Documents</option>
+                    <option value="Wallets/Bags">Wallets/Bags</option>
+                    <option value="Personal">Personal</option>
+                    <option value="Other">Other</option>
+                </select>
+                <textarea name="description" placeholder="Description of the item" required></textarea>
+                <input type="date" name="date" required>
+                <input type="text" name="location" placeholder="Where did you find it?" required>
+                <input type="text" name="contactName" placeholder="Your Name" required>
+                <input type="tel" name="contactNumber" placeholder="Contact Number (10 digits)" pattern="[0-9]{10}" required>
+                <input type="file" name="image" accept="image/*">
+                <button type="submit">Submit Found Report</button>
+            </form>
+        </section>
+
+        <section id="items">
+            <h2>Lost & Found Items</h2>
+            <div class="filters">
+                <input type="text" id="search" placeholder="Search by name or location...">
+                <select id="filter-type" onchange="renderItems()">
+                    <option value="All">All Items</option>
+                    <option value="Lost">Lost</option>
+                    <option value="Found">Found</option>
+                    <option value="Resolved">Resolved</option>
+                </select>
+            </div>
+            <div id="items-grid" class="items-grid"></div>
+        </section>
+    </main>
+
+    <!-- Modal -->
+    <div id="item-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
